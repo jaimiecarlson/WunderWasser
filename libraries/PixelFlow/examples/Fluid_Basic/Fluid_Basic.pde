@@ -26,6 +26,8 @@ import controlP5.*;
 import processing.serial.*;
 
 Serial port;
+Serial port2;
+
 // TODO:
 // 1. Making uniform velocity profile instead of round - CHECK
 // 2. No residue of earlier pipe - CHECK
@@ -291,12 +293,16 @@ Serial port;
     }
     
     //SERIAL LIST
+    
+    if(SERIAL) {
      println(Serial.list());
 
-   // Open the port that the Arduino board is connected to (in this case #0)
-   // Make sure to open the port at the same speed Arduino is using (9600bps)
-   port = new Serial(this, Serial.list()[0], 9600);
- 
+     // Open the port that the Arduino board is connected to (in this case #0)
+     // Make sure to open the port at the same speed Arduino is using (9600bps)
+     port = new Serial(this, Serial.list()[0], 9600);
+     port2 = new Serial(this, Serial.list()[1]. 9600); 
+   
+    }
     
   }
   
@@ -319,11 +325,14 @@ Serial port;
       println("Y pos: " + ypos + " Y velocity: " + velocities[1]);
     } else {
       //PRINT VELOCITIES TO SERIAL
-      port.write("X pos: " + xpos + " X velocity: " + velocities[0]);
-      port.write("Y pos: " + ypos + " Y velocity: " + velocities[1]);
-
+      
+      int v = (int) (velocities[0]*velocities[0] + velocities[1]* velocities[1]);
+      port.write(v); //print velocity for now (paddle - print pressure)
+      port2.write(v);
     }
-    
+    //8 force levels - write 1 byte (x velocity, y velocity) 4 4 
+    //function to map x velocity and y velocities to forces (log?)
+    //function to map pressure 8 (log scale)
  
     
     // clear render target
