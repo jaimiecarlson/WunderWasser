@@ -1,3 +1,3 @@
 # WunderWasser
 
-File path: libraries/PixelFlow/examples/Fluid_Basic
+File path for GUI: libraries/PixelFlow/examples/Fluid_Basic
