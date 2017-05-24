@@ -23,7 +23,9 @@ import controlP5.CallbackListener;
 import controlP5.CallbackEvent;
 import controlP5.*;
 
+import processing.serial.*;
 
+Serial port;
 // TODO:
 // 1. Making uniform velocity profile instead of round - CHECK
 // 2. No residue of earlier pipe - CHECK
@@ -80,7 +82,6 @@ import controlP5.*;
       pg_entrance.endDraw();
       
       fluid.addDensity(pg_entrance, 1, 1, 1);
-      
       
       //fluid.addDensity(px, py, radius, r, g, b, intensity);
       //fluid.addVelocity(px, py, radius, vx, vy);
@@ -171,6 +172,8 @@ import controlP5.*;
   
   float P1 = 0.0;
   float P2 = 0.0;
+  
+  boolean SERIAL = false;
   
   ControlP5 cp5;
   public RadioButton r;
@@ -287,6 +290,14 @@ import controlP5.*;
       println(velocities[i]);
     }
     
+    //SERIAL LIST
+     println(Serial.list());
+
+   // Open the port that the Arduino board is connected to (in this case #0)
+   // Make sure to open the port at the same speed Arduino is using (9600bps)
+   port = new Serial(this, Serial.list()[0], 9600);
+ 
+    
   }
   
 
@@ -302,9 +313,16 @@ import controlP5.*;
 
     //Print out integer values of fluid (this slows it down apparently)
     
-    velocities = fluid.getVelocity(velocities, (int) xpos, ((int) viewport_h - (int) ypos), 1, 1);
-    println("X pos: " + xpos + " X velocity: " + velocities[0]);
-    println("Y pos: " + ypos + " Y velocity: " + velocities[1]);
+    if (!SERIAL) {
+       velocities = fluid.getVelocity(velocities, (int) xpos, ((int) viewport_h - (int) ypos), 1, 1);
+      println("X pos: " + xpos + " X velocity: " + velocities[0]);
+      println("Y pos: " + ypos + " Y velocity: " + velocities[1]);
+    } else {
+      //PRINT VELOCITIES TO SERIAL
+      port.write("X pos: " + xpos + " X velocity: " + velocities[0]);
+      port.write("Y pos: " + ypos + " Y velocity: " + velocities[1]);
+
+    }
     
  
     
