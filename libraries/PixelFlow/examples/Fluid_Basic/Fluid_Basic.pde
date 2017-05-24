@@ -28,29 +28,6 @@ import processing.serial.*;
 Serial port;
 Serial port2;
 
-// TODO:
-// 1. Making uniform velocity profile instead of round - CHECK
-// 2. No residue of earlier pipe - CHECK
-// 3. Getting actual velocity values - CHECK
-// 4. 3-dimensional flow - can do computationally
-// 5. See the parabolic profile more clearly - stop it from being turbulent - yes
-// 6. Need to create a pressure gradient (?)
-// 7. Got correct values for parabolic profile - CHECK
-
-  // This example shows a very basic fluid simulation setup. 
-  // Multiple emitters add velocity/temperature/density each iteration.
-  // Obstacles are added at startup, by just drawing into a usual PGraphics object.
-  // The same way, obstacles can be added/removed dynamically.
-  //
-  // additionally some locations add temperature to the scene, to show how
-  // buoyancy works.
-  //
-  //
-  // controls:
-  //
-  // LMB: add Density + Velocity
-  // MMB: draw obstacles
-  // RMB: clear obstacles
 
   float[] velocities;
   
@@ -58,7 +35,7 @@ Serial port2;
     
      public float px, py, vy, radius, vscale, r, g, b, intensity, temperature;
      public float vx = 100f;
-     public float dpdx = (P2 - P1)/pipeLength;
+     public float dpdx;
      public float viscosity=100f;
      public float density = 100f;
     
@@ -66,89 +43,33 @@ Serial port2;
     @Override
     public void update(DwFluid2D fluid) {
      
-      // add impulse: density + velocity
+      // Add impulse: density + velocity
       intensity = 1.0f;
       px = viewport_w/3;
       py = viewport_h * 0.6;
       radius = pipeRadius;
-      r = 0.0f;
-      g = 0.3f;
-      b = 1.0f;
       vy = 0f;
       
+      //Draw density object
       PGraphics2D pg_entrance = (PGraphics2D) createGraphics(viewport_w, viewport_h, P2D);
       pg_entrance.smooth(0);
       pg_entrance.beginDraw();
       pg_entrance.clear();
       pg_entrance.rect(px, py-pipeRadius, pipeLength/2, 2*pipeRadius); //density of fluid in the pipe
       pg_entrance.endDraw();
-      
+
+      //Add density
       fluid.addDensity(pg_entrance, 1, 1, 1);
       
-      //fluid.addDensity(px, py, radius, r, g, b, intensity);
-      //fluid.addVelocity(px, py, radius, vx, vy);
+      //Add parabolic velocity profile
       for (int i = (int) px; i < (int) px + 15; i++) {
         for (int j = (int) py - (int) pipeRadius; j < py + pipeRadius; j++){
-          int y = abs(j - (int) py);
-         // println(y);
-           dpdx = (P2 - P1)/pipeLength;
-           dpdx = -1;
-          float v = vx / (pipeRadius*pipeRadius) * (y*y - pipeRadius*pipeRadius) * dpdx;
-        //  println(v);
-          //println(vx);
+          int y = abs(j - (int) py); //Find distance from centerline
+          dpdx = -deltaP/pipeLength; //Pressure drop over pipe
+          float v = vx / (pipeRadius*pipeRadius) * (y*y - pipeRadius*pipeRadius) * dpdx; //Velocity
           fluid.addVelocity(i, j, 2, v, 0);
         }
       }
-
-      /*if((fluid.simulation_step) % 200 == 0){
-        temperature = 50f;
-        fluid.addTemperature(px, py, radius, temperature);
-      }*/
-      
-      temperature = 20f;
-      fluid.addTemperature(px, py, radius, temperature);
-     
-      /*// add impulse: density + temperature
-      float animator = sin(fluid.simulation_step*0.01f);
- 
-      intensity = 1.0f;
-      px = 2*width/3f;
-      py = 150;
-      radius = 50;
-      r = 1.0f;
-      g = 0.0f;
-      b = 0.3f;
-      fluid.addDensity(px, py, radius, r, g, b, intensity);
-      
-      temperature = animator * 20f;
-     // temperature = 20f;
-     // fluid.addTemperature(px, py, radius, temperature);
-      
-      
-      // add impulse: density 
-      px = 1*width/3f;
-      py = height-2*height/3f;
-      radius = 50.5f;
-      r = g = b = 64/255f;
-      intensity = 1.0f;
-      fluid.addDensity(px, py, radius, r, g, b, intensity, 3);
-
-      
-      boolean mouse_input = !cp5.isMouseOver() && mousePressed && !obstacle_painter.isDrawing();
-      
-      // add impulse: density + velocity
-      if(mouse_input && mouseButton == LEFT){
-        radius = 15;
-        vscale = 15;
-        px     = mouseX;
-        py     = height-mouseY;
-        vx     = (mouseX - pmouseX) * +vscale;
-        vy     = (mouseY - pmouseY) * -vscale;
-        
-        fluid.addDensity(px, py, radius, 0.25f, 0.0f, 0.1f, 1.0f);
-        fluid.addVelocity(px, py, radius, vx, vy);
-      }*/
-     
     }
   }
   
@@ -172,14 +93,12 @@ Serial port2;
   float yTop = yCenter + pipeRadius;
   float yBottom = yCenter - pipeRadius;
   
-  float P1 = 0.0;
-  float P2 = 0.0;
+  float deltaP = pipeLength;
   
-  boolean SERIAL = false;
+  boolean SERIAL = false; //Set to true if it is being run on the same computer as Arduino; false otherwise
   
   ControlP5 cp5;
-  public RadioButton r;
-  
+  public RadioButton r; 
        
   DwFluid2D fluid;
   ObstaclePainter obstacle_painter;
@@ -248,36 +167,12 @@ Serial port2;
     pg_location.beginDraw();
     pg_location.clear();
     
-        // pgraphics for obstacles
+    // pgraphics for obstacles
     pg_obstacle_drawing = (PGraphics2D) createGraphics(viewport_w, viewport_h, P2D);
     pg_obstacle_drawing.smooth(0);
     pg_obstacle_drawing.beginDraw();
     pg_obstacle_drawing.clear();
-    
-    
-    
-    /*
-    // circle-obstacles
-    pg_obstacles.strokeWeight(10);
-    pg_obstacles.noFill();
-    pg_obstacles.noStroke();
-    pg_obstacles.fill(64);
-    float radius;
-    radius = 100;
-    pg_obstacles.ellipse(1*width/3f,  2*height/3f, radius, radius);
-    radius = 150;
-    pg_obstacles.ellipse(2*width/3f,  2*height/4f, radius, radius);
-    radius = 200;
-    pg_obstacles.stroke(64);
-    pg_obstacles.strokeWeight(10);
-    pg_obstacles.noFill();
-    pg_obstacles.ellipse(1*width/2f,  1*height/4f, radius, radius);
-    // border-obstacle
-    pg_obstacles.strokeWeight(20);
-    pg_obstacles.stroke(64);
-    pg_obstacles.noFill();
-    pg_obstacles.rect(0, 0, pg_obstacles.width, pg_obstacles.height;
-    */
+   
     pg_obstacles.endDraw(); 
     
     // class, that manages interactive drawing (adding/removing) of obstacles
@@ -287,23 +182,15 @@ Serial port2;
     
     frameRate(60);
     
-    velocities = fluid.getVelocity(null, (int) xpos, (int) ypos, 1, 1);
-    for (int i = 0; i < velocities.length; i++){
-      println(velocities[i]);
-    }
-    
-    //SERIAL LIST
-    
+    //Serial setup
     if(SERIAL) {
-     println(Serial.list());
+     println(Serial.list()); //Print out list of connected port
 
      // Open the port that the Arduino board is connected to (in this case #0)
      // Make sure to open the port at the same speed Arduino is using (9600bps)
-     port = new Serial(this, Serial.list()[0], 9600);
-     port2 = new Serial(this, Serial.list()[1]. 9600); 
-   
-    }
-    
+     port = new Serial(this, Serial.list()[0], 9600); //Change 0 based on Serial.list() printout
+     port2 = new Serial(this, Serial.list()[1], 9600); //Change 1 based on Serial.list() printout
+    } 
   }
   
 
@@ -313,35 +200,59 @@ Serial port2;
     // update simulation
     if(UPDATE_FLUID){
       fluid.addObstacles(pg_obstacles);
-      fluid.update(); //This seems silly
-      
+      fluid.update(); 
     }
 
-    //Print out integer values of fluid (this slows it down apparently)
-    
+    //Print out integer values of fluid at specific position
     if (!SERIAL) {
        velocities = fluid.getVelocity(velocities, (int) xpos, ((int) viewport_h - (int) ypos), 1, 1);
-      println("X pos: " + xpos + " X velocity: " + velocities[0]);
-      println("Y pos: " + ypos + " Y velocity: " + velocities[1]);
-    } else {
-      //PRINT VELOCITIES TO SERIAL
-      
-      int v = (int) (velocities[0]*velocities[0] + velocities[1]* velocities[1]);
-      port.write(v); //print velocity for now (paddle - print pressure)
-      port2.write(v);
+       println("X pos: " + xpos + " X velocity: " + velocities[0]);
+       println("Y pos: " + ypos + " Y velocity: " + velocities[1]);
+    } else { //Print velocities to serial
+     //Write X and Y velocities to Haply
+      port.write("X");
+      port.write((int) velocities[0]);
+      port.write("Y");
+      port.write((int) velocities[1]);
+      //Write pressure to Hapkit    
+      int px = viewport_w/3;
+      int pxRight = px + (int) pipeLength;
+      //Assume 0 pressure on the right, pressure increasing to the left
+      int pressureRight = 0;
+      float pressureGradient = (deltaP/pipeLength);
+      int pressure = pressureRight + (int) ((pxRight - (int) xpos)*pressureGradient);
+      port2.write(pressure);
     }
-    //8 force levels - write 1 byte (x velocity, y velocity) 4 4 
-    //function to map x velocity and y velocities to forces (log?)
-    //function to map pressure 8 (log scale)
- 
+    
+    //IDEA FOR ARDUINO SERIAL READING CODE:
+    /*
+    //Haply
+    int incomingByte;
+    int incomingXVelInt;
+    int incomingYVelInt;
+    void loop(){
+      if (Serial.available() > 0) {
+        incomingByte = Serial.read();
+        if (incomingByte == "X") {
+          incomingXVelInt = Serial.parseInt();
+        } else if (incomingByte == "Y"){
+          incomingYVelInt = Serial.parseInt();
+        }
+      }
+    
+    //Hapkit
+       int incomingPressure;
+    void loop(){
+      if (Serial.available() > 0) {
+        incomingPressure = Serial.read();
+      }
+    }
+    */
     
     // clear render target
     pg_fluid.beginDraw();
     pg_fluid.background(BACKGROUND_COLOR);
     pg_fluid.endDraw();
-    
-    
-    
     
     // render fluid stuff
     if(DISPLAY_FLUID_TEXTURES){
@@ -357,65 +268,56 @@ Serial port2;
     pg_fluid.beginDraw();
     pg_fluid.endDraw();
     
+    //Draw obstacle outline (Just for display)
     pg_obstacle_drawing.beginDraw();
     pg_obstacle_drawing.clear();
-   int xStart = viewport_w/3;
-  int yStart = (int) (viewport_h * 0.4); 
-  int yTop = yStart + (int) pipeRadius;
-  int yBottom = yStart - (int) pipeRadius;
-  platesOrPipe = (r.getArrayValue()[1] > 0) ? 1 : 0;
-  if(platesOrPipe==1){
-    pg_obstacle_drawing.noFill();
-    pg_obstacle_drawing.stroke(255);
-    pg_obstacle_drawing.ellipse(xStart+pipeLength, yStart, pipeRadius/2, 2*pipeRadius);
-    pg_obstacle_drawing.stroke(255);
-    pg_obstacle_drawing.line(xStart, yTop, xStart + pipeLength, yTop);
-    pg_obstacle_drawing.stroke(255);
-    pg_obstacle_drawing.line(xStart, yBottom, xStart + pipeLength, yBottom);
-    pg_obstacle_drawing.noFill();
-    pg_obstacle_drawing.arc(xStart, yStart, pipeRadius/2, 2*pipeRadius, HALF_PI, PI+HALF_PI);
-  } else {
-    pg_obstacle_drawing.stroke(255);
-    pg_obstacle_drawing.line(xStart, yTop, xStart + pipeLength, yTop);
-    pg_obstacle_drawing.stroke(255);
-    pg_obstacle_drawing.line(xStart, yBottom, xStart + pipeLength, yBottom);
-    
-  }
-
-    
-  
+    int xStart = viewport_w/3;
+    int yStart = (int) (viewport_h * 0.4); 
+    int yTop = yStart + (int) pipeRadius;
+    int yBottom = yStart - (int) pipeRadius;
+    platesOrPipe = (r.getArrayValue()[1] > 0) ? 1 : 0;
+    if(platesOrPipe==1){
+      //Draw a pipe
+      pg_obstacle_drawing.noFill();
+      pg_obstacle_drawing.stroke(255);
+      pg_obstacle_drawing.ellipse(xStart+pipeLength, yStart, pipeRadius/2, 2*pipeRadius);
+      pg_obstacle_drawing.stroke(255);
+      pg_obstacle_drawing.line(xStart, yTop, xStart + pipeLength, yTop);
+      pg_obstacle_drawing.stroke(255);
+      pg_obstacle_drawing.line(xStart, yBottom, xStart + pipeLength, yBottom);
+      pg_obstacle_drawing.noFill();
+      pg_obstacle_drawing.arc(xStart, yStart, pipeRadius/2, 2*pipeRadius, HALF_PI, PI+HALF_PI);
+    } else {
+      //Draw parallel plates
+      pg_obstacle_drawing.stroke(255);
+      pg_obstacle_drawing.line(xStart, yTop, xStart + pipeLength, yTop);
+      pg_obstacle_drawing.stroke(255);
+      pg_obstacle_drawing.line(xStart, yBottom, xStart + pipeLength, yBottom); 
+    }
     pg_obstacle_drawing.endDraw();
     
+    //Draw actual obstacle (blocks fluid from flowing)
     pg_obstacles.beginDraw();
     pg_obstacles.clear();
-    
     pg_obstacles.fill(255);
     pg_obstacles.rect(xStart, 0, pipeLength, yTop - 2* pipeRadius); //Top barrier
     pg_obstacles.rect(xStart, yBottom + 2*pipeRadius, pipeLength, yTop); //Bottom barrier
     pg_obstacles.rect(0, 0, xStart, viewport_h);
     pg_obstacles.endDraw();
-     
-   pg_location.beginDraw();   
-   pg_location.clear();
-   pg_location.fill(140);
+    
+    //Draw ellipse to mark location 
+    pg_location.beginDraw();   
+    pg_location.clear();
+    pg_location.fill(140);
+    pg_location.ellipse(xpos, ypos, 10, 10);
+    pg_location.endDraw();
 
-   pg_location.ellipse(xpos, ypos, 10, 10);
-   pg_location.endDraw();
-
-    // display  
-
-        image(pg_obstacles, 0, 0);
+    //Draw all displays 
+    image(pg_obstacles, 0, 0);
     image(pg_fluid    , 0, 0);
     image(pg_location, 0, 0);
-        image(pg_obstacle_drawing, 0, 0);
+    image(pg_obstacle_drawing, 0, 0);
 
-    
-    
-          //Drawing the pipe
-      
- 
-    //obstacle_painter.displayBrush(this.g);
-    
     // info
     String txt_fps = String.format(getClass().getName()+ "   [size %d/%d]   [frame %d]   [fps %6.2f]", fluid.fluid_w, fluid.fluid_h, fluid.simulation_step, frameRate);
     surface.setTitle(txt_fps);
@@ -471,7 +373,7 @@ Serial port2;
     if(key == '-') fluid_resizeDown();  // decrease fluid-grid resolution
     if(key == 'r') fluid_reset();       // restart simulation
     
-    //if(key == '1') DISPLAY_fluid_texture_mode = 0; // density
+    if(key == '1') DISPLAY_fluid_texture_mode = 0; // density
     if(key == '3') DISPLAY_fluid_texture_mode = 2; // pressure
     if(key == '4') DISPLAY_fluid_texture_mode = 3; // velocity
     
@@ -515,22 +417,23 @@ Serial port2;
       cp5.addButton("reset").setGroup(group_fluid).plugTo(this, "fluid_reset"     ).setSize(80, 18).setPosition(px    , py);
       cp5.addButton("+"    ).setGroup(group_fluid).plugTo(this, "fluid_resizeUp"  ).setSize(39, 18).setPosition(px+=82, py);
       cp5.addButton("-"    ).setGroup(group_fluid).plugTo(this, "fluid_resizeDown").setSize(39, 18).setPosition(px+=41, py);
-          
+    
+      //Listener for plates or pipe radio buttons; sets platesOrPipe and resets fluid    
       ControlListener c = new ControlListener(){
         public void controlEvent(ControlEvent theEvent){
-          println("Event value!");
-          println(theEvent.getValue());
           platesOrPipe = theEvent.getValue();
           fluid_reset();
         }
       };    
       
+      //Listener for geometry changes; resets fluid
        CallbackListener cb = new CallbackListener() {
         public void controlEvent(CallbackEvent theEvent) {
-          fluid_reset(); //No longer works at all
+          fluid_reset(); 
         }
       };
       
+      //Geometry radio buttons (plates or pipe)
       r = cp5.addRadioButton("radioButton")
          .setGroup(group_fluid)
          .setPosition(px - (82+41), py+=30)
@@ -538,8 +441,7 @@ Serial port2;
          .addItem("Pipe",1)
          .addListener(c);
       
-      
-      
+      //Sliders for fluid parameters
       px = 10;
       cp5.addSlider("velocity").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=(int)(oy*1.5f))
           .setRange(0, 1).setValue(fluid.param.dissipation_velocity).plugTo(fluid.param, "dissipation_velocity"); //actually viscosity
@@ -565,14 +467,10 @@ Serial port2;
       cp5.addSlider("temperature").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
           .setRange(0, 1).setValue(fluid.param.dissipation_temperature).plugTo(fluid.param, "dissipation_temperature");
           
-      cp5.addSlider("P1").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
-          .setRange(0, 1).setValue(P1).plugTo(P1).onChange(cb);
+      cp5.addSlider("deltaP").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
+          .setRange(50, 2000).setValue(deltaP).plugTo(deltaP).onChange(cb);
           
-       cp5.addSlider("P2").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
-          .setRange(0, 1).setValue(P2).plugTo(P2).onChange(cb);
-          
-  
-/*cp5.addSlider("vorticity").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
+  /*cp5.addSlider("vorticity").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
           .setRange(0, 1).setValue(fluid.param.vorticity).plugTo(fluid.param, "vorticity");
           
       cp5.addSlider("iterations").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
@@ -597,23 +495,6 @@ Serial port2;
           .addItem("Velocity Vectors", 0)
           .activate(DISPLAY_FLUID_VECTORS ? 0 : 2);
     }
-   
-    
-    ////////////////////////////////////////////////////////////////////////////
-    // GUI - DISPLAY
-    ////////////////////////////////////////////////////////////////////////////
-    /*Group group_display = cp5.addGroup("display");
-    {
-      group_display.setHeight(20).setSize(gui_w, 50)
-      .setBackgroundColor(color(16, 180)).setColorBackground(color(16, 180));
-      group_display.getCaptionLabel().align(CENTER, CENTER);
-      
-      px = 10; py = 15;
-      
-      cp5.addSlider("BACKGROUND").setGroup(group_display).setSize(sx,sy).setPosition(px, py)
-          .setRange(0, 255).setValue(BACKGROUND_COLOR).plugTo(this, "BACKGROUND_COLOR");
-    }*/
-    
     
     ////////////////////////////////////////////////////////////////////////////
     // GUI - ACCORDION
@@ -625,7 +506,7 @@ Serial port2;
   }
   
 
-  
+  //I did not touch any of this in case we want to paint obstacles later -jc
   public class ObstaclePainter{
     
     // 0 ... not drawing
