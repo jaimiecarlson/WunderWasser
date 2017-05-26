@@ -88,18 +88,39 @@ PVector           f_ee                 = new PVector(0, 0);
         angles.set(haply_2DoF.get_device_angles());
         pos_ee.set(haply_2DoF.get_device_position(angles.array()));
         
+        pos_ee.set(device2graphics(pos_ee));
+        
         println("Position");
         println(pos_ee.array()[0]);
         println(pos_ee.array()[1]);
         
-       xpos = pos_ee.array()[0];
-       ypos = pos_ee.array()[1];
+        xpos = pos_ee.array()[0];
+        ypos = pos_ee.array()[1];
        
-       draw();
+        draw();
 
     }
     
   }
+  
+  
+/**
+ * translates from device frame of reference to graphics frame of reference
+ */
+PVector device2graphics(PVector deviceFrame){
+   
+  return deviceFrame.set(-deviceFrame.x, deviceFrame.y);  
+}
+
+ 
+/**
+ * translates from graphics frame of reference to device frame of reference
+ */  
+PVector graphics2device(PVector graphicsFrame){
+  
+  return graphicsFrame.set(-graphicsFrame.x, graphicsFrame.y); 
+}
+
 
 
 
