@@ -84,6 +84,7 @@ PVector           pos_ee               = new PVector(0, 0);
 PVector           f_ee                 = new PVector(0, 0); 
 
   void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
+    println("Tick event called");
     if (haply_board.data_available()){
         angles.set(haply_2DoF.get_device_angles());
         pos_ee.set(haply_2DoF.get_device_position(angles.array()));
@@ -99,6 +100,8 @@ PVector           f_ee                 = new PVector(0, 0);
        
         draw();
 
+    } else {
+      println("Data not available from board");
     }
     
   }
