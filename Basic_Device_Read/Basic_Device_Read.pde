@@ -26,12 +26,12 @@ DeviceType        device_type;
 
 
 /* Animation Speed Parameters *****************************************************************************************/
-long              baseFrameRate        = 120; 
+long              baseFrameRate        = 60; //HOW OFTEN DRAW() WILL BE CALLED - CHANGED TO 60 FOR FLUIDS LIBRARY
 long              count                = 0; 
 
 
 /* Simulation Speed Parameters ****************************************************************************************/
-final long        SIMULATION_PERIOD    = 1; //ms
+final long        SIMULATION_PERIOD    = 1; //ms //HOW OFTEN HAPTIC OUTPUT WILL BE CALLED - 1000 HZ BY DEFAULT
 final long        HOUR_IN_MILLIS       = 36000000;
 CountdownTimer    haptic_timer;
 
@@ -99,6 +99,8 @@ void setup() {
  **********************************************************************************************************************/
 void draw() { 
   update_animation(angles.x*radsPerDegree, angles.y*radsPerDegree, pos_ee.x, pos_ee.y);
+  
+  //Put fluid drawing code here
 }
 
 
@@ -133,15 +135,6 @@ void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
 /* Graphical and physics functions ************************************************************************************/
 
 /**
- * Specifies the parameters for a haply_2DoF pantograph animation object
- */
-
-
-/**
- * Specifies the parameters for static wall animation object
- */
-
-/**
  * update animations of all virtual objects rendered 
  */
  
@@ -167,6 +160,8 @@ void update_animation(float th1, float th2, float x_E, float y_E){
   
   /* Vertex E from Fwd Kin calculations */
   //pantograph.setVertex(2,device_origin.x+x_E, device_origin.y+y_E);   
+  
+  //PUT FLUIDS LIBRARY INFORMATION HERE
 }
 
 
