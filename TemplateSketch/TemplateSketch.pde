@@ -129,7 +129,7 @@ PVector           f_ee                 = new PVector(0, 0);
   boolean DISPLAY_FLUID_VECTORS      = true;
   int     DISPLAY_fluid_texture_mode = 3;
   
-  
+  boolean FLUID_TEST = false;
   
 
 
@@ -153,7 +153,7 @@ void setup(){
   /* DEVICE */
   haply_2DoF = new Device(device_type.HaplyTwoDOF, deviceID, haply_board);
 
-
+/*
 
   //FLUID BASIC CODE
    //FLUIDBASIC STARTS HERE 
@@ -208,7 +208,7 @@ void setup(){
     obstacle_painter = new ObstaclePainter(pg_obstacles);
     
     createGUI();
-
+*/
     //FLUIDBASIC ENDS HERE
  
 }
@@ -241,24 +241,24 @@ void draw(){
 /*** PHYSICS OF THE SIMULATION ****/ 
 
   //INSERT CODE HERE
+    if (FLUID_TEST){
+      // update simulation
+      if(UPDATE_FLUID){
+        fluid.addObstacles(pg_obstacles);
+        fluid.update(); 
+      }
   
-    // update simulation
-    if(UPDATE_FLUID){
-      fluid.addObstacles(pg_obstacles);
-      fluid.update(); 
+        velocities = fluid.getVelocity(velocities, (int) xpos, ((int) viewport_h - (int) ypos), 1, 1);
+         println("X pos: " + xpos + " X velocity: " + velocities[0]);
+         println("Y pos: " + ypos + " Y velocity: " + velocities[1]);
+         int px = viewport_w/3;
+        int pxRight = px + (int) pipeLength;
+        //Assume 0 pressure on the right, pressure increasing to the left
+        int pressureRight = 0;
+        float pressureGradient = (deltaP/pipeLength);
+        int pressure = pressureRight + (int) ((pxRight - (int) xpos)*pressureGradient);
+        println("Pressure: " + pressure);
     }
-
-      velocities = fluid.getVelocity(velocities, (int) xpos, ((int) viewport_h - (int) ypos), 1, 1);
-       println("X pos: " + xpos + " X velocity: " + velocities[0]);
-       println("Y pos: " + ypos + " Y velocity: " + velocities[1]);
-       int px = viewport_w/3;
-      int pxRight = px + (int) pipeLength;
-      //Assume 0 pressure on the right, pressure increasing to the left
-      int pressureRight = 0;
-      float pressureGradient = (deltaP/pipeLength);
-      int pressure = pressureRight + (int) ((pxRight - (int) xpos)*pressureGradient);
-      println("Pressure: " + pressure);
-      
 
 /************************************/
 
@@ -267,11 +267,8 @@ void draw(){
   }
 
   /******* ANIMATION TIMER ********/ 
-  if(frameCount % animation_count == 0){
+  if(frameCount % animation_count == 0 && FLUID_TEST){
       //INSERT GRAPHICS CODE HERE
-      
-    
-      
     
     // clear render target
     pg_fluid.beginDraw();
