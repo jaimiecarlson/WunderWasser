@@ -114,7 +114,7 @@ void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
     println("Data available");
     /* GET END-EFFECTOR POSITION (TASK SPACE) */
     angles.set(haply_2DoF.get_device_angles()); 
-    pos_ee.set( haply_2DoF.get_device_position(angles.array()));
+    pos_ee.set(haply_2DoF.get_device_position(angles.array()));
     pos_ee.set(device2graphics(pos_ee));    
     
     /* PHYSICS OF THE SIMULATION */
@@ -122,6 +122,7 @@ void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
 
     f_ee = (f_wall.copy()).mult(-1);
     f_ee.set(graphics2device(f_ee));
+    
   } else {
     println("Data not available");
   }
@@ -155,6 +156,9 @@ void update_animation(float th1, float th2, float x_E, float y_E){
   float l_ani = pixelsPerMeter*l; 
   float L_ani = pixelsPerMeter*L; 
   float d_ani = pixelsPerMeter*d; 
+  
+  println("X Position: " + x_E);
+  println("Y Position: " + y_E);
   
   /* Vertex A with th1 from encoder reading */
   //pantograph.setVertex(1,device_origin.x+l_ani*cos(th1), device_origin.y+l_ani*sin(th1)); 

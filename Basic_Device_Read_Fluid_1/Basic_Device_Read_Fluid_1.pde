@@ -79,7 +79,7 @@ PVector           angles               = new PVector(0, 0);
 PVector           torques              = new PVector(0, 0);
 
 /* task space */
-PVector           pos_ee               = new PVector(0, 0);
+PVector           pos_ee               = new PVector(300, 300);
 PVector           f_ee                 = new PVector(0, 0); 
 
 
@@ -132,7 +132,6 @@ float[] velocities;
   boolean DISPLAY_FLUID_VECTORS      = true;
   int     DISPLAY_fluid_texture_mode = 3;
   
-  Serial port, port2;
 
 /*********************************
 * Fluid setup function
@@ -288,21 +287,7 @@ void updateFluid(){
       float pressureGradient = (deltaP/pipeLength);
       int pressure = pressureRight + (int) ((pxRight - (int) xpos)*pressureGradient);
       println("Pressure: " + pressure);
-    } else { //Print velocities to serial
-     //Write X and Y velocities to Haply
-      port.write("X");
-      port.write((int) velocities[0]);
-      port.write("Y");
-      port.write((int) velocities[1]);
-      //Write pressure to Hapkit    
-      int px = viewport_w/3;
-      int pxRight = px + (int) pipeLength;
-      //Assume 0 pressure on the right, pressure increasing to the left
-      int pressureRight = 0;
-      float pressureGradient = (deltaP/pipeLength);
-      int pressure = pressureRight + (int) ((pxRight - (int) xpos)*pressureGradient);
-      port2.write(pressure);
-    }
+    } 
     
   
     // clear render target
@@ -396,6 +381,13 @@ void update_animation(float th1, float th2, float x_E, float y_E){
   float L_ani = pixelsPerMeter*L; 
   float d_ani = pixelsPerMeter*d; 
   
+  //Update X and Y position
+  xpos = x_E;
+  ypos = y_E;
+  
+  println("X: " + xpos);
+  println("Y: " + ypos);
+  
   updateFluid();
   
   
@@ -407,8 +399,7 @@ void update_animation(float th1, float th2, float x_E, float y_E){
   
   /* Vertex E from Fwd Kin calculations */
   //pantograph.setVertex(2,device_origin.x+x_E, device_origin.y+y_E);   
-  
-  //PUT FLUIDS LIBRARY INFORMATION HERE
+
 }
 
 
