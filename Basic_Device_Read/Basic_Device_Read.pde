@@ -108,10 +108,10 @@ void draw() {
  * Haptics simulation event, engages state of physical mechanism, calculates and updates physics simulation conditions
  **********************************************************************************************************************/ 
 void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
-  
+  println("Timer called");
   /* check if new data is available from physical device */
   if (haply_board.data_available()) {
-
+    println("Data available");
     /* GET END-EFFECTOR POSITION (TASK SPACE) */
     angles.set(haply_2DoF.get_device_angles()); 
     pos_ee.set( haply_2DoF.get_device_position(angles.array()));
@@ -122,8 +122,11 @@ void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
 
     f_ee = (f_wall.copy()).mult(-1);
     f_ee.set(graphics2device(f_ee));
+  } else {
+    println("Data not available");
   }
 
+  println("Setting torque to 0");
   /* update device torque in simulation and on physical device */
   haply_2DoF.set_device_torques(f_ee.array());
   torques.set(haply_2DoF.mechanisms.get_torque());
@@ -140,6 +143,7 @@ void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
  
 void update_animation(float th1, float th2, float x_E, float y_E){
   
+  println("Drawing - should be called less often than device poll");
   /* To clean up the left-overs of drawings from the previous loop */
   background(255); 
   
