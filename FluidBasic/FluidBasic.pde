@@ -183,7 +183,7 @@ void setup() {
 /*void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
   
   /* check if new data is available from physical device */
-  if (haply_board.data_available()) {
+//  if (haply_board.data_available()) {
 
     /* GET END-EFFECTOR POSITION (TASK SPACE) */
 //    angles.set(haply_2DoF.get_device_angles()); 
