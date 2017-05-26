@@ -46,7 +46,7 @@ CountdownTimer    haptic_timer;
 
 /* Thread  Parameters ************************************/
 int             baseFrameRate     = 1000;
-int             animation_count   = baseFrameRate/501;
+int             animation_count   = baseFrameRate/60; //Frame rate of 60
 int             haptics_count     = baseFrameRate/1000;
 
 
@@ -208,8 +208,7 @@ void setup(){
     obstacle_painter = new ObstaclePainter(pg_obstacles);
     
     createGUI();
-    
-    frameRate(60);
+
     //FLUIDBASIC ENDS HERE
  
 }
