@@ -1,0 +1,3 @@
+[submodule "hAPI"]
+	path = hAPI
+	url = https://github.com/haphub/hAPI
