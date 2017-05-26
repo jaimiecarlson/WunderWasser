@@ -83,6 +83,25 @@ PVector           torques              = new PVector(0, 0);
 PVector           pos_ee               = new PVector(0, 0);
 PVector           f_ee                 = new PVector(0, 0); 
 
+  void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
+    if (haply_board.data_available()){
+        angles.set(haply_2DoF.get_device_angles());
+        pos_ee.set(haply_2DoF.get_device_position(angles.array()));
+        
+        println("Position");
+        println(pos_ee.array()[0]);
+        println(pos_ee.array()[1]);
+        
+       xpos = pos_ee.array()[0];
+       ypos = pos_ee.array()[1];
+       
+       draw();
+
+    }
+    
+  }
+
+
 
 
   float[] velocities;
@@ -261,23 +280,7 @@ PVector           f_ee                 = new PVector(0, 0);
     
   }
   
-  void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
-    if (haply_board_data_available()){
-      angles.set(haply_2DoF.get_device_angles());
-      pos_ee.set(haply_2DoF.get_device_position(angles.array()));
-      
-      println("Position");
-      println(pos_ee.array()[0]);
-      println(pos_ee.array()[1]);
-      
-     xpos = pos_ee.array()[0];
-     ypos = pos_ee.array()[1];
-     
-     draw();
 
-    }
-    
-  }
 
   public void draw() {    
     
