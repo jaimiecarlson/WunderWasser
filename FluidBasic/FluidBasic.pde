@@ -98,13 +98,26 @@ PVector           f_ee                 = new PVector(0, 0);
         xpos = pos_ee.array()[0];
         ypos = pos_ee.array()[1];
        
-        draw();
+        draw2();
 
     } else {
       println("Data not available from board");
     }
     
   }
+  
+  
+
+/* Timer control event functions **************************************************************************************/
+
+/**
+ * haptic timer reset
+ */
+void onFinishEvent(CountdownTimer t){
+  println("Resetting timer...");
+  haptic_timer.reset();
+  haptic_timer = CountdownTimerService.getNewCountdownTimer(this).configure(SIMULATION_PERIOD, HOUR_IN_MILLIS).start();
+}
   
   
 /**
@@ -306,7 +319,7 @@ PVector graphics2device(PVector graphicsFrame){
   
 
 
-  public void draw() {    
+  public void draw2() {    
     
     // update simulation
     if(UPDATE_FLUID){
