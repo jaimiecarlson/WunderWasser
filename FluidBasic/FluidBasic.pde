@@ -186,14 +186,14 @@ void setup() {
   if (haply_board.data_available()) {
 
     /* GET END-EFFECTOR POSITION (TASK SPACE) */
-    angles.set(haply_2DoF.get_device_angles()); 
-    pos_ee.set( haply_2DoF.get_device_position(angles.array()));
+//    angles.set(haply_2DoF.get_device_angles()); 
+ //   pos_ee.set( haply_2DoF.get_device_position(angles.array()));
     
-    pos_ee.set(device2graphics(pos_ee));    
+   // pos_ee.set(device2graphics(pos_ee));    
     
     
-    println("Position");
-    println(haply_2DoF.get_device_position(angles.array()));
+   // println("Position");
+   // println(haply_2DoF.get_device_position(angles.array()));
     
     
     /* PHYSICS OF THE SIMULATION */
@@ -207,14 +207,14 @@ void setup() {
 
     f_ee = (f_wall.copy()).mult(-1);
     f_ee.set(graphics2device(f_ee));*/
-  }
+//  }
 
   /* update device torque in simulation and on physical device */
  /* haply_2DoF.set_device_torques(f_ee.array());
   torques.set(haply_2DoF.mechanisms.get_torque());
   haply_2DoF.device_write_torques();*/
   
-}*/
+//}
 
 
 /* Graphical and physics functions ************************************************************************************/
@@ -555,7 +555,7 @@ import com.dhchoi.CountdownTimerService;
   }*/
   
   void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
-    if (haply_board_data_available()){
+    if (haply_board.data_available()){
       angles.set(haply_2DoF.get_device_angles());
       pos_ee.set(haply_2DoF.get_device_position(angles.array()));
       
