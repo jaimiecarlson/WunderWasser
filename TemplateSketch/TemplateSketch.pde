@@ -241,18 +241,8 @@ void draw(){
 /*** PHYSICS OF THE SIMULATION ****/ 
 
   //INSERT CODE HERE
-
-/************************************/
-
-  } else {
-    println("Data not available from board");
-  }
-
-  /******* ANIMATION TIMER ********/ 
-  if(frameCount % animation_count == 0){
-      //INSERT GRAPHICS CODE HERE
-      
-      // update simulation
+  
+    // update simulation
     if(UPDATE_FLUID){
       fluid.addObstacles(pg_obstacles);
       fluid.update(); 
@@ -269,6 +259,18 @@ void draw(){
       int pressure = pressureRight + (int) ((pxRight - (int) xpos)*pressureGradient);
       println("Pressure: " + pressure);
       
+
+/************************************/
+
+  } else {
+    println("Data not available from board");
+  }
+
+  /******* ANIMATION TIMER ********/ 
+  if(frameCount % animation_count == 0){
+      //INSERT GRAPHICS CODE HERE
+      
+    
       
     
     // clear render target
