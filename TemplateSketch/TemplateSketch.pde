@@ -154,10 +154,6 @@ void setup(){
   haply_2DoF = new Device(device_type.HaplyTwoDOF, deviceID, haply_board);
 
 
-    /* haptics event timer, create and start a timer that has been configured to trigger onTickEvents */
-  /* every TICK (1ms or 1kHz) and run for HOUR_IN_MILLIS (1hr), then resetting */
-  haptic_timer = CountdownTimerService.getNewCountdownTimer(this).configure(SIMULATION_PERIOD, HOUR_IN_MILLIS).start();
-
 
   //FLUID BASIC CODE
    //FLUIDBASIC STARTS HERE 
@@ -224,9 +220,9 @@ void setup(){
  */
 void draw(){
   
- 
+   println("Draw Called!");
   if(haply_board.data_available()){
-    
+    println("Data available");
 
 /*** GET END-EFFECTOR POSITION (TASK SPACE)****/ 
  
@@ -237,6 +233,9 @@ void draw(){
     println("Position");
     println(pos_ee.array()[0]);
     println(pos_ee.array()[1]);
+    
+    xpos = pos_ee.x;
+    ypos = pos_ee.y;
  
 /************************************/   
     
@@ -246,6 +245,8 @@ void draw(){
 
 /************************************/
 
+  } else {
+    println("Data not available from board");
   }
 
   /******* ANIMATION TIMER ********/ 
