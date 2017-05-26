@@ -1,12 +1,21 @@
 /**
- * 
- * PixelFlow | Copyright (C) 2016 Thomas Diewald - http://thomasdiewald.com
- * 
- * A Processing/Java library for high performance GPU-Computing (GLSL).
- * MIT License: https://opensource.org/licenses/MIT
- * 
+ *******************************************************************************
+ * @file       Pantagraph_Processing.pde
+ * @author     
+ * @version    V0.1.0
+ * @date       27-February-2017
+ * @brief      Prototype tests for encoder input for Pantagraph application
+ *******************************************************************************
+ * @attention
+ *
+ *
+ *******************************************************************************
  */
 
+/* library imports *************************************************************/
+import processing.serial.*;
+import com.dhchoi.CountdownTimer;
+import com.dhchoi.CountdownTimerService;
 
 
 import com.thomasdiewald.pixelflow.java.DwPixelFlow;
@@ -23,64 +32,59 @@ import controlP5.CallbackListener;
 import controlP5.CallbackEvent;
 import controlP5.*;
 
-import processing.serial.*;
-import com.dhchoi.CountdownTimer;
-import com.dhchoi.CountdownTimerService;
+/* Device block definitions ************************************/
+Device            haply_2DoF;
+byte              deviceID             = 5;
+Board             haply_board;
+DeviceType        device_type;
+
+/* Simulation Speed Parameters ****************************************************************************************/
+final long        SIMULATION_PERIOD    = 1; //ms
+final long        HOUR_IN_MILLIS       = 36000000;
+CountdownTimer    haptic_timer;
 
 
-Serial port;
-Serial port2;
+/* Thread  Parameters ************************************/
+int             baseFrameRate     = 1000;
+int             animation_count   = baseFrameRate/501;
+int             haptics_count     = baseFrameRate/1000;
+
+
+/*Graphic Objects *******************************************/
+PShape            pantograph, joint1, joint2, handle;
+PShape            wall; 
+
+int               pixelsPerMeter       = 4000; 
+float             radsPerDegree        = 0.01745; 
+
+float             l                    = .05; // in m: these are length for graphic objects
+float             L                    = .07;
+float             d                    = .02;
+float             r_ee                 = d/3; 
+
+PVector           device_origin        = new PVector (0, 0) ; 
+
+
+/*Physics parameters*/
 
 
 
+// generic data for a 2DOF device
+/* joint space */
+PVector           angles               = new PVector(0, 0);
+PVector           torques              = new PVector(0, 0);
+
+/* task space */
+PVector           pos_ee               = new PVector(0, 0);
+PVector           f_ee                 = new PVector(0, 0); 
+
+//FLUID BASIC PARAMETERS
 
   float[] velocities;
   
-  public class MyFluidData implements DwFluid2D.FluidData{
-    
-     public float px, py, vy, radius, vscale, r, g, b, intensity, temperature;
-     public float vx = 100f;
-     public float dpdx;
-     public float viscosity=100f;
-     public float density = 100f;
-    
-    // update() is called during the fluid-simulation update step.
-    @Override
-    public void update(DwFluid2D fluid) {
-     
-      // Add impulse: density + velocity
-      intensity = 1.0f;
-      px = viewport_w/3;
-      py = viewport_h * 0.6;
-      radius = pipeRadius;
-      vy = 0f;
-      
-      //Draw density object
-      PGraphics2D pg_entrance = (PGraphics2D) createGraphics(viewport_w, viewport_h, P2D);
-      pg_entrance.smooth(0);
-      pg_entrance.beginDraw();
-      pg_entrance.clear();
-      pg_entrance.rect(px, py-pipeRadius, pipeLength/2, 2*pipeRadius); //density of fluid in the pipe
-      pg_entrance.endDraw();
 
-      //Add density
-      fluid.addDensity(pg_entrance, 1, 1, 1);
-      
-      //Add parabolic velocity profile
-      for (int i = (int) px; i < (int) px + 15; i++) {
-        for (int j = (int) py - (int) pipeRadius; j < py + pipeRadius; j++){
-          int y = abs(j - (int) py); //Find distance from centerline
-          dpdx = -deltaP/pipeLength; //Pressure drop over pipe
-          float v = vx / (pipeRadius*pipeRadius) * (y*y - pipeRadius*pipeRadius) * dpdx; //Velocity
-          fluid.addVelocity(i, j, 2, v, 0);
-        }
-      }
-    }
-  }
-  
-  
-  int viewport_w = 1057;
-  int viewport_h = 594;
+  int viewport_w = 800;
+  int viewport_h = 800;
   int fluidgrid_scale = 1;
   
   int gui_w = 200;
@@ -125,14 +129,38 @@ Serial port2;
   boolean DISPLAY_FLUID_VECTORS      = true;
   int     DISPLAY_fluid_texture_mode = 3;
   
-
-  public void settings() {
-    size(viewport_w, viewport_h, P2D);
-    smooth(2);
-  }
   
-  public void setup() {
-   
+  
+
+
+/**
+ * @brief    Main setup function, defines parameters and hardware setup
+ */
+void setup(){
+  
+  /*Setup for the graphic display window and drawing objects*/
+  
+  size(600, 400, P2D);
+  background(255);
+  frameRate(baseFrameRate);
+
+  
+  /* Initialization of the Board, Device, and Device Components*/ 
+ 
+  /* BOARD */
+  haply_board = new Board(this, Serial.list()[0], 0);
+
+  /* DEVICE */
+  haply_2DoF = new Device(device_type.HaplyTwoDOF, deviceID, haply_board);
+
+
+    /* haptics event timer, create and start a timer that has been configured to trigger onTickEvents */
+  /* every TICK (1ms or 1kHz) and run for HOUR_IN_MILLIS (1hr), then resetting */
+  haptic_timer = CountdownTimerService.getNewCountdownTimer(this).configure(SIMULATION_PERIOD, HOUR_IN_MILLIS).start();
+
+
+  //FLUID BASIC CODE
+   //FLUIDBASIC STARTS HERE 
     // main library context
     DwPixelFlow context = new DwPixelFlow(this);
     context.print();
@@ -186,93 +214,62 @@ Serial port2;
     createGUI();
     
     frameRate(60);
-    
-    //Serial setup
-    if(SERIAL) {
-     println(Serial.list()); //Print out list of connected port
+    //FLUIDBASIC ENDS HERE
+ 
+}
 
-     // Open the port that the Arduino board is connected to (in this case #0)
-     // Make sure to open the port at the same speed Arduino is using (9600bps)
-     port = new Serial(this, Serial.list()[0], 9600); //Change 0 based on Serial.list() printout
-     port2 = new Serial(this, Serial.list()[1], 9600); //Change 1 based on Serial.list() printout
-     
-    
-    }
-    
-    
-  }
+      
+/**
+ * @brief    Main draw function, updates frame at perscribed frame rate
+ */
+void draw(){
   
- /* void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
-    if (haply_board_data_available()){
-      angles.set(haply_2DoF.get_device_angles());
-      pos_ee.set(haply_2DoF.get_device_position(angles.array()));
-      
-      println("Position");
-      println(pos_ee.array()[0]);
-      println(pos_ee.array()[1]);
-      
-     xpos = pos_ee.array()[0];
-     ypos = pos_ee.array()[1];
-     
-     draw();
-
-    }
+ 
+  if(haply_board.data_available()){
     
-  }*/
 
-  public void draw() {    
+/*** GET END-EFFECTOR POSITION (TASK SPACE)****/ 
+ 
+    //INSERT CODE HERE
+    angles.set(haply_2DoF.get_device_angles());
+    pos_ee.set(haply_2DoF.get_device_position(angles.array()));
     
-    // update simulation
+    println("Position");
+    println(pos_ee.array()[0]);
+    println(pos_ee.array()[1]);
+ 
+/************************************/   
+    
+/*** PHYSICS OF THE SIMULATION ****/ 
+
+  //INSERT CODE HERE
+
+/************************************/
+
+  }
+
+  /******* ANIMATION TIMER ********/ 
+  if(frameCount % animation_count == 0){
+      //INSERT GRAPHICS CODE HERE
+      
+      // update simulation
     if(UPDATE_FLUID){
       fluid.addObstacles(pg_obstacles);
       fluid.update(); 
     }
 
-    //Print out integer values of fluid at specific position
-    if (!SERIAL) {
-       velocities = fluid.getVelocity(velocities, (int) xpos, ((int) viewport_h - (int) ypos), 1, 1);
+      velocities = fluid.getVelocity(velocities, (int) xpos, ((int) viewport_h - (int) ypos), 1, 1);
        println("X pos: " + xpos + " X velocity: " + velocities[0]);
        println("Y pos: " + ypos + " Y velocity: " + velocities[1]);
-    } else { //Print velocities to serial
-     //Write X and Y velocities to Haply
-      port.write("X");
-      port.write((int) velocities[0]);
-      port.write("Y");
-      port.write((int) velocities[1]);
-      //Write pressure to Hapkit    
-      int px = viewport_w/3;
+       int px = viewport_w/3;
       int pxRight = px + (int) pipeLength;
       //Assume 0 pressure on the right, pressure increasing to the left
       int pressureRight = 0;
       float pressureGradient = (deltaP/pipeLength);
       int pressure = pressureRight + (int) ((pxRight - (int) xpos)*pressureGradient);
-      port2.write(pressure);
-    }
-    
-    //IDEA FOR ARDUINO SERIAL READING CODE:
-    /*
-    //Haply
-    int incomingByte;
-    int incomingXVelInt;
-    int incomingYVelInt;
-    void loop(){
-      if (Serial.available() > 0) {
-        incomingByte = Serial.read();
-        if (incomingByte == "X") {
-          incomingXVelInt = Serial.parseInt();
-        } else if (incomingByte == "Y"){
-          incomingYVelInt = Serial.parseInt();
-        }
-      }
-    
-    //Hapkit
-       int incomingPressure;
-    void loop(){
-      if (Serial.available() > 0) {
-        incomingPressure = Serial.read();
-      }
-    }
-    */
+      println("Pressure: " + pressure);
+      
+      
     
     // clear render target
     pg_fluid.beginDraw();
@@ -348,8 +345,22 @@ Serial port2;
     surface.setTitle(txt_fps);
    
   
+      
   }
   
+  /********** HAPTICS TIMER *************/ 
+  
+  if(frameCount % haptics_count == 0){
+     //HAPTICS CODE HERE
+  }
+  
+  
+}
+
+
+
+
+///Drawing code
 
 
   public void mousePressed(){
@@ -625,6 +636,52 @@ Serial port2;
 
   }
   
+  //Fluid Basic extra class:
+  
+  public class MyFluidData implements DwFluid2D.FluidData{
+    
+     public float px, py, vy, radius, vscale, r, g, b, intensity, temperature;
+     public float vx = 100f;
+     public float dpdx;
+     public float viscosity=100f;
+     public float density = 100f;
+    
+    // update() is called during the fluid-simulation update step.
+    @Override
+    public void update(DwFluid2D fluid) {
+     
+      // Add impulse: density + velocity
+      intensity = 1.0f;
+      px = viewport_w/3;
+      py = viewport_h * 0.6;
+      radius = pipeRadius;
+      vy = 0f;
+      
+      //Draw density object
+      PGraphics2D pg_entrance = (PGraphics2D) createGraphics(viewport_w, viewport_h, P2D);
+      pg_entrance.smooth(0);
+      pg_entrance.beginDraw();
+      pg_entrance.clear();
+      pg_entrance.rect(px, py-pipeRadius, pipeLength/2, 2*pipeRadius); //density of fluid in the pipe
+      pg_entrance.endDraw();
+
+      //Add density
+      fluid.addDensity(pg_entrance, 1, 1, 1);
+      
+      //Add parabolic velocity profile
+      for (int i = (int) px; i < (int) px + 15; i++) {
+        for (int j = (int) py - (int) pipeRadius; j < py + pipeRadius; j++){
+          int y = abs(j - (int) py); //Find distance from centerline
+          dpdx = -deltaP/pipeLength; //Pressure drop over pipe
+          float v = vx / (pipeRadius*pipeRadius) * (y*y - pipeRadius*pipeRadius) * dpdx; //Velocity
+          fluid.addVelocity(i, j, 2, v, 0);
+        }
+      }
+    }
+  }
   
   
-  
+  public void settings() {
+    size(viewport_w, viewport_h, P2D);
+    smooth(2);
+  }
