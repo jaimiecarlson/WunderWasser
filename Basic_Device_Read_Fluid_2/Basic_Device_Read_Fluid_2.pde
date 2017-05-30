@@ -39,7 +39,6 @@ byte              deviceID             = 5;
 Board             haply_board;
 DeviceType        device_type;
 
-
 /* Animation Speed Parameters *****************************************************************************************/
 long              baseFrameRate        = 60; //HOW OFTEN DRAW() WILL BE CALLED - CHANGED TO 60 FOR FLUIDS LIBRARY
 long              count                = 0; 
@@ -67,7 +66,7 @@ PVector           device_origin        = new PVector (0, 0) ;
 
 
 /* Physics Simulation parameters **************************************************************************************/
-PVector           f_wall               = new PVector(0, 0); 
+PVector           haply_f_wall               = new PVector(0, 0); 
 float             k_wall               = 400; //N/mm 
 PVector           pen_wall             = new PVector(0, 0); 
 PVector           pos_wall             = new PVector(d/2, .07);
@@ -75,13 +74,31 @@ PVector           pos_wall             = new PVector(d/2, .07);
 
 /* generic data for a 2DOF device */
 /* joint space */
-PVector           angles               = new PVector(0, 0);
-PVector           torques              = new PVector(0, 0);
+PVector           haply_angles               = new PVector(0, 0);
+PVector           haply_torques              = new PVector(0, 0);
 
 /* task space */
-PVector           pos_ee               = new PVector(300, 300);
-PVector           f_ee                 = new PVector(0, 0); 
+PVector           haply_pos_ee               = new PVector(300, 300);
+PVector           haply_f_ee                 = new PVector(0, 0); 
 
+
+/* Device block definitions ********************************************************************************************/
+Board           paddle_link;
+Device          paddle;
+DeviceType      degreesOfFreedom;
+
+/* Communications parameters ******************************************************************************************/
+byte            commType            = 0;
+byte            device_function     = 1;
+float[]         in_data;
+
+float           freq                = 0;
+float           amplitude           = 0;
+
+int             counter             = 0; 
+
+float[]         angle;
+float[]         torque;
 
 //FLUID VARIABLES
 float[] velocities;
@@ -218,15 +235,26 @@ void setup() {
   
   /* Initialization of the Board, Device, and Device Components */
   
+  //LINKAGE
   /* BOARD */
   haply_board = new Board(this, Serial.list()[0], 0);
 
   /* DEVICE */
   haply_2DoF = new Device(device_type.HaplyTwoDOF, deviceID, haply_board);
+  
+  //PADDLE
+  
+  /* BOARD */
+  paddle_link = new Board(this, Serial.list()[1], 0); //don't know where in list
+  //paddle_link = new Board(this, Serial.list()[1], 57600);
+  /* DEVICE */
+  paddle = new Device(degreesOfFreedom.HapticPaddle, device_function, paddle_link);
 
   /* haptics event timer, create and start a timer that has been configured to trigger onTickEvents */
   /* every TICK (1ms or 1kHz) and run for HOUR_IN_MILLIS (1hr), then resetting */
   haptic_timer = CountdownTimerService.getNewCountdownTimer(this).configure(SIMULATION_PERIOD, HOUR_IN_MILLIS).start();
+  
+  
 }
 
 
@@ -234,7 +262,7 @@ void setup() {
  * Main draw function, updates simulation animation at prescribed framerate 
  **********************************************************************************************************************/
 void draw() { 
-  update_animation(angles.x*radsPerDegree, angles.y*radsPerDegree, pos_ee.x, pos_ee.y);
+  update_animation(haply_angles.x*radsPerDegree, haply_angles.y*radsPerDegree, haply_pos_ee.x, haply_pos_ee.y);
   
   //Put fluid drawing code here
 }
@@ -243,46 +271,70 @@ void draw() {
 /**********************************************************************************************************************
  * Haptics simulation event, engages state of physical mechanism, calculates and updates physics simulation conditions
  **********************************************************************************************************************/ 
-void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
-  println("Timer called");
-  /* check if new data is available from physical device */
+void haplyUpdate(){
   if (haply_board.data_available()) {
-    println("Data available");
+    println("Haply data available");
     /* GET END-EFFECTOR POSITION (TASK SPACE) */
-    angles.set(haply_2DoF.get_device_angles()); 
-    pos_ee.set( haply_2DoF.get_device_position(angles.array()));
-    pos_ee.set(device2graphics(pos_ee));    
+    haply_angles.set(haply_2DoF.get_device_angles()); 
+    haply_pos_ee.set( haply_2DoF.get_device_position(haply_angles.array()));
+    haply_pos_ee.set(device2graphics(haply_pos_ee));    
     
     /* PHYSICS OF THE SIMULATION */
-    f_wall.set(0, 0); 
+    haply_f_wall.set(0, 0); 
     
     
     //Different possible scales
     //k should be tuned with hardware - want movement to be detectable but not to totally knock their hand out of the way
     if (velocityScale == LINEAR_SCALE){
-       f_wall.set(k*xvel, k*yvel); //Default
+       haply_f_wall.set(k*xvel, k*yvel); //Default
     } else if (velocityScale == LOG_SCALE){
-      f_wall.set(log(k*xvel), log(k*yvel)); //Weber's Law - if yvel is twice as much as the last one, will feel a constant difference between them
+      haply_f_wall.set(log(k*xvel), log(k*yvel)); //Weber's Law - if yvel is twice as much as the last one, will feel a constant difference between them
     } else if (velocityScale == QUAD_SCALE){
-      f_wall.set(pow(k*xvel, 2), pow(k*yvel, 2));
+      haply_f_wall.set(pow(k*xvel, 2), pow(k*yvel, 2));
     } else if (velocityScale == EXP_SCALE){
-      f_wall.set(pow(2, k*xvel), pow(2, k*yvel)); //More emphasized difference
+      haply_f_wall.set(pow(2, k*xvel), pow(2, k*yvel)); //More emphasized difference
     } else {
       println("Invalid scale");
     }
 
-    f_ee = (f_wall.copy()).mult(-1);
-    f_ee.set(graphics2device(f_ee));
+    haply_f_ee = (haply_f_wall.copy()).mult(-1);
+    haply_f_ee.set(graphics2device(haply_f_ee));
   } else {
-    println("Data not available");
+    println("Haply data not available");
   }
 
   println("Setting torque to 0");
   /* update device torque in simulation and on physical device */
-  haply_2DoF.set_device_torques(f_ee.array());
-  torques.set(haply_2DoF.mechanisms.get_torque());
+  haply_2DoF.set_device_torques(haply_f_ee.array());
+  haply_torques.set(haply_2DoF.mechanisms.get_torque());
   haply_2DoF.device_write_torques();
   
+
+}
+
+void hapkitUpdate(){
+   //HAPKIT PADDLE PART
+  if (paddle_link.data_available()) {
+    paddle.receive_data();
+    angle = paddle.mechanisms.get_angle();
+    torque = paddle.mechanisms.get_torque();
+    torque[0] = -k*torque[0]; //scaling factor
+    
+  } else {
+    paddle.set_parameters(device_function, freq, amplitude);
+    paddle.send_data();
+  }
+  
+  
+}
+ 
+ 
+ 
+void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
+  println("Timer called");
+  /* check if new data is available from physical device */
+  haplyUpdate();
+  hapkitUpdate();
 }
 
 
