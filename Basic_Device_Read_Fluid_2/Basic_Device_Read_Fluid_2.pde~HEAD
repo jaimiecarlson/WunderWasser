@@ -161,10 +161,6 @@ float press = 0;
   int velocityScale = LINEAR_SCALE;
   int k = 1; //Scaling factor   
 
-
-
-float PADDLE = false;
-float LINKAGE = false;
 /*********************************
 * Fluid setup function
 ***********************************/
@@ -241,21 +237,19 @@ void setup() {
   
   //LINKAGE
   /* BOARD */
-  if(LINKAGE) {
-    haply_board = new Board(this, Serial.list()[0], 0);
+  haply_board = new Board(this, Serial.list()[0], 0);
 
-    /* DEVICE */
-    haply_2DoF = new Device(device_type.HaplyTwoDOF, deviceID, haply_board);
-  }
+  /* DEVICE */
+  haply_2DoF = new Device(device_type.HaplyTwoDOF, deviceID, haply_board);
+  
   //PADDLE
   
   /* BOARD */
-  if (PADDLE) {
-    paddle_link = new Board(this, Serial.list()[1], 0); //don't know where in list
-    //paddle_link = new Board(this, Serial.list()[1], 57600);
-    /* DEVICE */
-    paddle = new Device(degreesOfFreedom.HapticPaddle, device_function, paddle_link);
-  }
+  paddle_link = new Board(this, Serial.list()[1], 0); //don't know where in list
+  //paddle_link = new Board(this, Serial.list()[1], 57600);
+  /* DEVICE */
+  paddle = new Device(degreesOfFreedom.HapticPaddle, device_function, paddle_link);
+
   /* haptics event timer, create and start a timer that has been configured to trigger onTickEvents */
   /* every TICK (1ms or 1kHz) and run for HOUR_IN_MILLIS (1hr), then resetting */
   haptic_timer = CountdownTimerService.getNewCountdownTimer(this).configure(SIMULATION_PERIOD, HOUR_IN_MILLIS).start();
@@ -324,23 +318,10 @@ void hapkitUpdate(){
     paddle.receive_data();
     angle = paddle.mechanisms.get_angle();
     torque = paddle.mechanisms.get_torque();
-    //torque[0] = -k*torque[0]; //scaling factor
+    torque[0] = -k*torque[0]; //scaling factor
     
-    //Different possible scales
-    //k should be tuned with hardware - want movement to be detectable but not to totally knock their hand out of the way
-    if (velocityScale == LINEAR_SCALE){
-       torque[0] = -k*press;
-    } else if (velocityScale == LOG_SCALE){
-      torque[0] = -k*log(press); //Weber's Law - if yvel is twice as much as the last one, will feel a constant difference between them
-    } else if (velocityScale == QUAD_SCALE){
-      torque[0] = -pow(k*press, 2);
-    } else if (velocityScale == EXP_SCALE){
-      torque[0] = -pow(2, k*press);
-    } else {
-      println("Invalid scale");
-    }  
   } else {
-    paddle.set_parameters(device_function, freq, amplitude); 
+    paddle.set_parameters(device_function, freq, amplitude);
     paddle.send_data();
   }
   
@@ -352,12 +333,8 @@ void hapkitUpdate(){
 void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
   println("Timer called");
   /* check if new data is available from physical device */
-  if (LINKAGE) {
-    haplyUpdate();
-  }
-  if (PADDLE) {
-    hapkitUpdate();
-  }
+  haplyUpdate();
+  hapkitUpdate();
 }
 
 
