@@ -163,8 +163,8 @@ float press = 0;
 
 
 
-float PADDLE = false;
-float LINKAGE = false;
+boolean PADDLE = true;
+boolean LINKAGE = false;
 /*********************************
 * Fluid setup function
 ***********************************/
@@ -251,7 +251,7 @@ void setup() {
   
   /* BOARD */
   if (PADDLE) {
-    paddle_link = new Board(this, Serial.list()[1], 0); //don't know where in list
+    paddle_link = new Board(this, Serial.list()[32], 0); //don't know where in list
     //paddle_link = new Board(this, Serial.list()[1], 57600);
     /* DEVICE */
     paddle = new Device(degreesOfFreedom.HapticPaddle, device_function, paddle_link);
