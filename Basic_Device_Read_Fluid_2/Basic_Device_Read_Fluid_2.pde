@@ -687,6 +687,19 @@ void onFinishEvent(CountdownTimer t){
       cp5.addSlider("deltaP").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
           .setRange(50, 2000).setValue(deltaP).plugTo(deltaP).onChange(cb);
           
+                cp5.addSlider("paddleK").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
+          .setRange(0.1, 2000).setValue(paddleK).plugTo(paddleK).onChange(cb);
+          
+                cp5.addSlider("linkageK").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
+          .setRange(0.1, 2000).setValue(linkageK).plugTo(linkageK).onChange(cb);     
+                    
+                cp5.addSlider("paddleVelocityScale").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
+          .setRange(0, 3).setValue(paddleVelocityScale).plugTo(paddleVelocityScale).onChange(cb);
+          
+                cp5.addSlider("linkageVelocityScale").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
+          .setRange(0,3).setValue(linkageVelocityScale).plugTo(linkageVelocityScale).onChange(cb);
+          
+          
   /*cp5.addSlider("vorticity").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
           .setRange(0, 1).setValue(fluid.param.vorticity).plugTo(fluid.param, "vorticity");
           
