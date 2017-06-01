@@ -158,9 +158,10 @@ float press = 0;
   int QUAD_SCALE = 2;
   int EXP_SCALE = 3;
   
-  int velocityScale = LINEAR_SCALE;
-  int k = 1; //Scaling factor   
-
+  int paddleVelocityScale = LINEAR_SCALE;
+  int paddleK = 1; //Scaling factor   
+  int linkageVelocityScale = LINEAR_SCALE;
+  int linkageK = 1;
 
 
 boolean PADDLE = true;
@@ -291,14 +292,14 @@ void haplyUpdate(){
     
     //Different possible scales
     //k should be tuned with hardware - want movement to be detectable but not to totally knock their hand out of the way
-    if (velocityScale == LINEAR_SCALE){
-       haply_f_wall.set(k*xvel, k*yvel); //Default
-    } else if (velocityScale == LOG_SCALE){
-      haply_f_wall.set(log(k*xvel), log(k*yvel)); //Weber's Law - if yvel is twice as much as the last one, will feel a constant difference between them
-    } else if (velocityScale == QUAD_SCALE){
-      haply_f_wall.set(pow(k*xvel, 2), pow(k*yvel, 2));
-    } else if (velocityScale == EXP_SCALE){
-      haply_f_wall.set(pow(2, k*xvel), pow(2, k*yvel)); //More emphasized difference
+    if (linkageVelocityScale == LINEAR_SCALE){
+       haply_f_wall.set(linkageK*xvel, linkageK*yvel); //Default
+    } else if (linkageVelocityScale == LOG_SCALE){
+      haply_f_wall.set(log(linkageK*xvel), log(linkageK*yvel)); //Weber's Law - if yvel is twice as much as the last one, will feel a constant difference between them
+    } else if (linkageVelocityScale == QUAD_SCALE){
+      haply_f_wall.set(pow(linkageK*xvel, 2), pow(linkageK*yvel, 2));
+    } else if (linkageVelocityScale == EXP_SCALE){
+      haply_f_wall.set(pow(2, linkageK*xvel), pow(2, linkageK*yvel)); //More emphasized difference
     } else {
       println("Invalid scale");
     }
@@ -328,18 +329,19 @@ void hapkitUpdate(){
     
     //Different possible scales
     //k should be tuned with hardware - want movement to be detectable but not to totally knock their hand out of the way
-    if (velocityScale == LINEAR_SCALE){
-       torque[0] = -k*press;
-    } else if (velocityScale == LOG_SCALE){
-      torque[0] = -k*log(press); //Weber's Law - if yvel is twice as much as the last one, will feel a constant difference between them
-    } else if (velocityScale == QUAD_SCALE){
-      torque[0] = -pow(k*press, 2);
-    } else if (velocityScale == EXP_SCALE){
-      torque[0] = -pow(2, k*press);
+    if (paddleVelocityScale == LINEAR_SCALE){
+       torque[0] = -paddleK*press;
+    } else if (paddleVelocityScale == LOG_SCALE){
+      torque[0] = -paddleK*log(press); //Weber's Law - if yvel is twice as much as the last one, will feel a constant difference between them
+    } else if (paddleVelocityScale == QUAD_SCALE){
+      torque[0] = -pow(paddleK*press, 2);
+    } else if (paddleVelocityScale == EXP_SCALE){
+      torque[0] = -pow(2, paddleK*press);
     } else {
       println("Invalid scale");
     }  
   } else {
+    
     paddle.set_parameters(device_function, freq, amplitude); 
     paddle.send_data();
   }
