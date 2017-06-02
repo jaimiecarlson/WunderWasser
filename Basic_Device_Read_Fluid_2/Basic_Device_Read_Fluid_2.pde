@@ -116,6 +116,7 @@ float press = 0;
   int gui_y = 20;
   
   float pipeRadius = 100;
+  float innerRadius = 50;
   float pipeLength = 200;
   float entranceVelocity = 100;
   float platesOrPipe = 0;
@@ -164,8 +165,12 @@ float press = 0;
   int linkageK = 1;
 
 
-boolean PADDLE = true;
+boolean PADDLE = false;
 boolean LINKAGE = false;
+
+float viscosity = 1;
+
+int couetteTime = 0;
 /*********************************
 * Fluid setup function
 ***********************************/
@@ -243,19 +248,19 @@ void setup() {
   //LINKAGE
   /* BOARD */
   if(LINKAGE) {
-    haply_board = new Board(this, Serial.list()[0], 0);
+  //  haply_board = new Board(this, Serial.list()[0], 0);
 
     /* DEVICE */
-    haply_2DoF = new Device(device_type.HaplyTwoDOF, deviceID, haply_board);
+   // haply_2DoF = new Device(device_type.HaplyTwoDOF, deviceID, haply_board);
   }
   //PADDLE
   
   /* BOARD */
   if (PADDLE) {
-    paddle_link = new Board(this, Serial.list()[32], 0); //don't know where in list
+    //paddle_link = new Board(this, Serial.list()[32], 0); //don't know where in list
     //paddle_link = new Board(this, Serial.list()[1], 57600);
     /* DEVICE */
-    paddle = new Device(degreesOfFreedom.HapticPaddle, device_function, paddle_link);
+    //paddle = new Device(degreesOfFreedom.HapticPaddle, device_function, paddle_link);
   }
   /* haptics event timer, create and start a timer that has been configured to trigger onTickEvents */
   /* every TICK (1ms or 1kHz) and run for HOUR_IN_MILLIS (1hr), then resetting */
@@ -352,7 +357,6 @@ void hapkitUpdate(){
  
  
 void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
-  println("Timer called");
   /* check if new data is available from physical device */
   if (LINKAGE) {
     haplyUpdate();
@@ -371,8 +375,11 @@ void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
  
 void updateFluid(){
   println("Updating fluid");
+  println("Plates or pipe" + platesOrPipe);
  // update simulation
     if(UPDATE_FLUID){
+      fluid.param.dissipation_velocity = 1 - viscosity;
+      fluid.param.dissipation_density = viscosity;
       fluid.addObstacles(pg_obstacles);
       fluid.update(); 
     }
@@ -421,7 +428,11 @@ void updateFluid(){
     int yStart = (int) (viewport_h * 0.4); 
     int yTop = yStart + (int) pipeRadius;
     int yBottom = yStart - (int) pipeRadius;
-    platesOrPipe = (r.getArrayValue()[1] > 0) ? 1 : 0;
+    platesOrPipe = 
+    (r.getArrayValue()[4] == 1) ? 4 :
+    (r.getArrayValue()[3] == 1) ? 3 :
+    (r.getArrayValue()[2] == 1) ? 2 :
+    (r.getArrayValue()[1] == 1) ? 1 : 0;
     if(platesOrPipe==1){
       //Draw a pipe
       pg_obstacle_drawing.noFill();
@@ -433,12 +444,59 @@ void updateFluid(){
       pg_obstacle_drawing.line(xStart, yBottom, xStart + pipeLength, yBottom);
       pg_obstacle_drawing.noFill();
       pg_obstacle_drawing.arc(xStart, yStart, pipeRadius/2, 2*pipeRadius, HALF_PI, PI+HALF_PI);
-    } else {
+    } else if (platesOrPipe == 0) {
       //Draw parallel plates
       pg_obstacle_drawing.stroke(255);
       pg_obstacle_drawing.line(xStart, yTop, xStart + pipeLength, yTop);
       pg_obstacle_drawing.stroke(255);
       pg_obstacle_drawing.line(xStart, yBottom, xStart + pipeLength, yBottom); 
+    } else if (platesOrPipe == 2){
+      int interval = 50;
+      couetteTime += (int) interval*cb_fluid_data.vx/(2*1000);
+      couetteTime = couetteTime % interval;
+      pg_obstacle_drawing.stroke(120);
+      pg_obstacle_drawing.line(xStart, yBottom, xStart + couetteTime, yBottom);
+      int i = xStart + couetteTime;
+      for (i = xStart + couetteTime; i < xStart + pipeLength-interval; i+=interval){
+        pg_obstacle_drawing.stroke(255);
+        pg_obstacle_drawing.line(i, yBottom, i+(interval/2), yBottom);
+        pg_obstacle_drawing.stroke(120);
+        pg_obstacle_drawing.line(i+(interval/2), yBottom, i+interval, yBottom);
+      }
+      if (i + (int) interval/2 > xStart + pipeLength) {
+        pg_obstacle_drawing.stroke(255);
+        pg_obstacle_drawing.line(i, yBottom, xStart + pipeLength, yBottom);
+      } else {
+         pg_obstacle_drawing.stroke(255);
+         pg_obstacle_drawing.line(i, yBottom, i + (interval/2), yBottom);
+         pg_obstacle_drawing.stroke(120);
+         pg_obstacle_drawing.line(i + (interval/2), yBottom, xStart + pipeLength, yBottom);
+      }
+      pg_obstacle_drawing.stroke(255);
+      pg_obstacle_drawing.line(xStart, yTop, xStart + pipeLength, yTop); 
+    } else if (platesOrPipe == 3) {
+      pg_obstacle_drawing.noFill();
+      pg_obstacle_drawing.stroke(255);
+      pg_obstacle_drawing.ellipse(xStart+pipeLength, yStart, pipeRadius/2, 2*pipeRadius);
+      pg_obstacle_drawing.stroke(255);
+      pg_obstacle_drawing.line(xStart, yTop, xStart + pipeLength, yTop);
+      pg_obstacle_drawing.stroke(255);
+      pg_obstacle_drawing.line(xStart, yBottom, xStart + pipeLength, yBottom);
+      pg_obstacle_drawing.noFill();
+      pg_obstacle_drawing.arc(xStart, yStart, pipeRadius/2, 2*pipeRadius, HALF_PI, PI+HALF_PI);
+      
+     pg_obstacle_drawing.noFill();
+      pg_obstacle_drawing.stroke(255);
+      int py = (int) (yTop + yBottom)/2;
+      pg_obstacle_drawing.ellipse(xStart+pipeLength, py, innerRadius/2, 2*innerRadius);
+      pg_obstacle_drawing.stroke(255);
+      pg_obstacle_drawing.line(xStart, py - innerRadius, xStart + pipeLength, py - innerRadius);
+      pg_obstacle_drawing.stroke(255);
+      pg_obstacle_drawing.line(xStart, py + innerRadius, xStart + pipeLength, py + innerRadius);
+      pg_obstacle_drawing.noFill();
+      pg_obstacle_drawing.arc(xStart, py, innerRadius/2, 2*innerRadius, HALF_PI, PI+HALF_PI);
+      
+      
     }
     pg_obstacle_drawing.endDraw();
     
@@ -449,6 +507,10 @@ void updateFluid(){
     pg_obstacles.rect(xStart, 0, pipeLength, yTop - 2* pipeRadius); //Top barrier
     pg_obstacles.rect(xStart, yBottom + 2*pipeRadius, pipeLength, yTop); //Bottom barrier
     pg_obstacles.rect(0, 0, xStart, viewport_h);
+    
+    if (platesOrPipe == 3) {
+      pg_obstacles.rect(0, yStart - innerRadius, viewport_w, 2*innerRadius);      
+    }
     pg_obstacles.endDraw();
     
     //Draw ellipse to mark location 
@@ -656,17 +718,29 @@ void onFinishEvent(CountdownTimer t){
          .setPosition(px - (82+41), py+=30)
          .addItem("Plate",0)
          .addItem("Pipe",1)
+         .addItem("Couette", 2)
+         .addItem("Annular Flow", 3)
+         .addItem("Obstacles", 4)
          .addListener(c);
       
       //Sliders for fluid parameters
       px = 10;
-      cp5.addSlider("velocity").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=(int)(oy*1.5f))
-          .setRange(0, 1).setValue(fluid.param.dissipation_velocity).plugTo(fluid.param, "dissipation_velocity"); //actually viscosity
       
-      cp5.addSlider("density").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
-          .setRange(0, 1).setValue(fluid.param.dissipation_density).plugTo(fluid.param, "dissipation_density");
+      py += 100.0f;
+      
+      cp5.addSlider("viscosity").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=(int)(oy*1.5f))
+          .setRange(0, 1).setValue(viscosity).plugTo(viscosity).onChange(cb); //actually viscosity
+      
+//      cp5.addSlider("velocity").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=(int)(oy*1.5f))
+ //         .setRange(0, 1).setValue(fluid.param.dissipation_velocity).plugTo(fluid.param, "dissipation_velocity"); //actually viscosity
+      
+   //   cp5.addSlider("density").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
+   //       .setRange(0, 1).setValue(fluid.param.dissipation_density).plugTo(fluid.param, "dissipation_density");
           
-      cp5.addSlider("pipeRadius").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
+      cp5.addSlider("innerRadius").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
+          .setRange(50, pipeRadius).setValue(innerRadius).plugTo(innerRadius).onChange(cb);
+          
+              cp5.addSlider("pipeRadius").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
           .setRange(50, 300).setValue(pipeRadius).plugTo(pipeRadius).onChange(cb);
           
       cp5.addSlider("pipeLength").setGroup(group_fluid).setSize(sx, sy).setPosition(px, py+=oy)
@@ -714,7 +788,7 @@ void onFinishEvent(CountdownTimer t){
       
       RadioButton rb_setFluid_DisplayMode = cp5.addRadio("fluid_displayMode").setGroup(group_fluid).setSize(80,18).setPosition(px, py+=(int)(oy*1.5f))
           .setSpacingColumn(2).setSpacingRow(2).setItemsPerRow(2)
-          .addItem("Temperature", 1)
+         // .addItem("Temperature", 1)
           .addItem("Pressure"   ,2)
           .addItem("Velocity"   ,3)
           .activate(DISPLAY_fluid_texture_mode);
@@ -866,14 +940,52 @@ void onFinishEvent(CountdownTimer t){
       //Add density
       fluid.addDensity(pg_entrance, 1, 1, 1);
       
-      //Add parabolic velocity profile
-      for (int i = (int) px; i < (int) px + 15; i++) {
-        for (int j = (int) py - (int) pipeRadius; j < py + pipeRadius; j++){
-          int y = abs(j - (int) py); //Find distance from centerline
-          dpdx = -deltaP/pipeLength; //Pressure drop over pipe
-          float v = vx / (pipeRadius*pipeRadius) * (y*y - pipeRadius*pipeRadius) * dpdx; //Velocity
-          fluid.addVelocity(i, j, 2, v, 0);
+      if (platesOrPipe == 0) {
+        //Plates: Add parabolic velocity profile
+        for (int i = (int) px; i < (int) px + 15; i++) {
+          for (int j = (int) py - (int) pipeRadius; j < py + pipeRadius; j++){
+            int y = abs(j - (int) py); //Find distance from centerline
+            dpdx = -deltaP/pipeLength; //Pressure drop over pipe
+            float v = vx / (pipeRadius*pipeRadius) * (y*y - pipeRadius*pipeRadius) * dpdx; //Velocity
+            fluid.addVelocity(i, j, 2, v, 0);
+          }
         }
+      } else if (platesOrPipe == 1) {
+        //Pipe: Add pipe velocity profile
+        for (int i = (int) px; i < (int) px + 15; i++) {
+          for (int j = (int) py - (int) pipeRadius; j < py + pipeRadius; j++){
+            int y = abs(j - (int) py); //Find distance from centerline
+            dpdx = -deltaP/pipeLength; //Pressure drop over pipe
+            float v = vx /(pipeRadius*pipeRadius) * 1 / (4*viscosity) * (y*y - pipeRadius*pipeRadius) * dpdx; //Velocity
+            fluid.addVelocity(i, j, 2, v, 0);
+          }
+        }
+      } else if (platesOrPipe == 2){
+        //Couette Flow: Add velocity profile
+        for (int i = (int) px; i < (int) px + 15; i++) {
+          for (int j = (int) py - (int) pipeRadius; j < py + pipeRadius; j++){
+            int pBottom = (int) (py - pipeRadius);
+            int y = abs(j - pBottom); //Find distance from centerline
+            dpdx = -deltaP/pipeLength; //Pressure drop over pipe
+            float v = ((dpdx/(2*viscosity)) * y * (2*pipeRadius - y)) + (vx*y/(2*pipeRadius)); //Velocity
+            fluid.addVelocity(i, j, 2, v, 0);
+          }
+        }
+      } else if (platesOrPipe == 3) {
+        //Annular flow
+        for (int i = (int) px; i < (int) px + 15; i++) {
+          for (int j = (int) py - (int) pipeRadius; j < py + pipeRadius; j++){
+            int y = abs(j - (int) py); //Find distance from centerline
+            dpdx = -deltaP/pipeLength; //Pressure drop over pipe
+            int c = (int) ((pipeRadius*pipeRadius - innerRadius*innerRadius) / (float) Math.log(pipeRadius/innerRadius));
+            float v = (float)  -dpdx/(4*viscosity) * (-1 + y*y/(pipeRadius*pipeRadius) - (float) (c*Math.log(((float) y)/pipeRadius)));
+            v  *= vx;
+            //float v = vx /(pipeRadius*pipeRadius) * 1 / (4*viscosity) * (y*y - pipeRadius*pipeRadius) * dpdx; //Velocity
+            fluid.addVelocity(i, j, 1, v, 0);
+          }
+        }
+      } else if (platesOrPipe == 4) {
+        //Random obstacles
       }
     }
   }
