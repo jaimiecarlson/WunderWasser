@@ -494,19 +494,40 @@ void updateFluid(){
       pg_obstacle_drawing.stroke(255);
       pg_obstacle_drawing.line(xStart, py + innerRadius, xStart + pipeLength, py + innerRadius);
       pg_obstacle_drawing.noFill();
-      pg_obstacle_drawing.arc(xStart, py, innerRadius/2, 2*innerRadius, HALF_PI, PI+HALF_PI);
-      
-      
+      pg_obstacle_drawing.arc(xStart, py, innerRadius/2, 2*innerRadius, HALF_PI, PI+HALF_PI);   
+    } else if (platesOrPipe == 4) {
+      pg_obstacles.beginDraw();
+      pg_obstacles.clear();
+      pg_obstacles.rectMode(CENTER);
+      pg_obstacles.noStroke();
+      pg_obstacles.fill(64);
+      randomSeed(0);
+      for(int i = 0; i < 20; i++){
+        float px = random(width);
+        float py = random(height);
+        float sx = random(15, 60);
+        float sy = random(15, 60);
+        pg_obstacle_drawing.rectMode(CENTER);
+        pg_obstacle_drawing.noStroke();
+        pg_obstacle_drawing.fill(125);
+        pg_obstacle_drawing.rect(px+viewport_w/3, py, sx, sy);
+        pg_obstacles.rect(px+ viewport_w/3, py, sx, sy);
+      }
+      pg_obstacles.endDraw();
+      pg_obstacles.rectMode(CORNER);
+      pg_obstacle_drawing.rectMode(CORNER);
     }
     pg_obstacle_drawing.endDraw();
     
     //Draw actual obstacle (blocks fluid from flowing)
-    pg_obstacles.beginDraw();
-    pg_obstacles.clear();
-    pg_obstacles.fill(255);
-    pg_obstacles.rect(xStart, 0, pipeLength, yTop - 2* pipeRadius); //Top barrier
-    pg_obstacles.rect(xStart, yBottom + 2*pipeRadius, pipeLength, yTop); //Bottom barrier
-    pg_obstacles.rect(0, 0, xStart, viewport_h);
+    if (platesOrPipe != 4) {
+      pg_obstacles.beginDraw();
+      pg_obstacles.clear();
+      pg_obstacles.fill(255);
+      pg_obstacles.rect(xStart, 0, pipeLength, yTop - 2* pipeRadius); //Top barrier
+      pg_obstacles.rect(xStart, yBottom + 2*pipeRadius, pipeLength, yTop); //Bottom barrier
+      pg_obstacles.rect(0, 0, xStart, viewport_h);
+    }
     
     if (platesOrPipe == 3) {
       pg_obstacles.rect(0, yStart - innerRadius, viewport_w, 2*innerRadius);      
@@ -986,6 +1007,7 @@ void onFinishEvent(CountdownTimer t){
         }
       } else if (platesOrPipe == 4) {
         //Random obstacles
+        fluid.addVelocity(px, py, 200, vx, 0);
       }
     }
   }
