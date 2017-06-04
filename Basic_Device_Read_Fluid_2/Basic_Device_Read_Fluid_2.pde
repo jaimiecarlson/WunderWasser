@@ -337,15 +337,22 @@ void haplyUpdate(){
 void hapkitUpdate(){
    //HAPKIT PADDLE PART
   if (paddle_link.data_available()) {
-    paddle.receive_data();
+    paddle.receive_data(); //Sets paddle mechanisms to correct angle and torque
     angle = paddle.mechanisms.get_angle();
     torque = paddle.mechanisms.get_torque();
-    //torque[0] = -k*torque[0]; //scaling factor
+    println(torque); //If length of torque array is more than 1, the below explanation may be wrong. 
     
-    //Different possible scales
-    //k should be tuned with hardware - want movement to be detectable but not to totally knock their hand out of the way
+    //Scaling and k should be tuned with hardware
+    
+    //Adapted from HelloWall example where torque is modified by 
+    //torque[0] = -paddleK*torque[0];
+    //To represent elastic effect of pushing against a wall
+    
+    //I believe torque[0] outputs the torque of the paddle, and should be 1D array (test above). If not, explanation could be wrong. 
+    //Torque[0] is being set to an absolute torque pushing on the user's paddle. This should be proportional to pressure.
+    //When torque[0] is set to pressure, it will be written to device at the next paddle.send_data() because it is in mechanisms
     if (paddleVelocityScale == LINEAR_SCALE){
-       torque[0] = -paddleK*press;
+      torque[0] = -paddleK*press;
     } else if (paddleVelocityScale == LOG_SCALE){
       torque[0] = -paddleK*log(press); //Weber's Law - if yvel is twice as much as the last one, will feel a constant difference between them
     } else if (paddleVelocityScale == QUAD_SCALE){
@@ -359,6 +366,10 @@ void hapkitUpdate(){
     
     paddle.set_parameters(device_function, freq, amplitude); 
     paddle.send_data();
+    
+    communicationType = 1;
+    paddle.deviceLink.transmit(communicationType, deviceID, actuator_positions, params);
+
   }
   
   
