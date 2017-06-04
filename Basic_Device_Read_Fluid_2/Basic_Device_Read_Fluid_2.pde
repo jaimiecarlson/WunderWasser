@@ -351,6 +351,7 @@ void hapkitUpdate(){
     //I believe torque[0] outputs the torque of the paddle, and should be 1D array (test above). If not, explanation could be wrong. 
     //Torque[0] is being set to an absolute torque pushing on the user's paddle. This should be proportional to pressure.
     //When torque[0] is set to pressure, it will be written to device at the next paddle.send_data() because it is in mechanisms
+    
     if (paddleVelocityScale == LINEAR_SCALE){
       torque[0] = -paddleK*press;
     } else if (paddleVelocityScale == LOG_SCALE){
@@ -362,13 +363,37 @@ void hapkitUpdate(){
     } else {
       println("Invalid scale");
     }  
+    
   } else {
     
     paddle.set_parameters(device_function, freq, amplitude); 
     paddle.send_data();
     
-    communicationType = 1;
-    paddle.deviceLink.transmit(communicationType, deviceID, actuator_positions, params);
+    //If send_data needs to be tweaked more (say we want constant vibration instead of pressure output):
+    //this is the essence of send_data in the Device.java folder
+    //Not quite sure how to get actuator positions tbh
+    //paddle.deviceLink.transmit(1, device_function, actuator_positions, {freq, amplitude});
+    
+    //If it needs to be tweaked even more, this is transmit in the Board.java folder:
+    /*public void transmit(byte type, byte deviceID, byte[] positions, float[] data){
+      byte[] outData = new byte[2 + 4*data.length];
+      byte[] segments = new byte[4];
+    
+      outData[0] = format_header(type, positions);
+      outData[1] = deviceID;
+      this.deviceID = deviceID; //this = paddle.deviceLink
+    
+    
+      int j = 2;
+      for(int i = 0; i < data.length; i++){
+        segments = FloatToBytes(data[i]);
+        System.arraycopy(segments, 0, outData, j, 4);
+        j = j + 4;
+      }
+      
+      this.port.write(outData);
+    }*/
+    
 
   }
   
@@ -438,12 +463,19 @@ void updateFluid(){
        println("X pos: " + xpos + " X velocity: " + velocities[0]);
        println("Y pos: " + ypos + " Y velocity: " + velocities[1]);
        //Write pressure to Hapkit    
-      int px = viewport_w/3;
-      int pxRight = px + (int) pipeLength;
+      int px = viewport_w/3; //Pipe starting position
+      int pxRight = px + (int) pipeLength; //Pipe length
       //Assume 0 pressure on the right, pressure increasing to the left
       int pressureRight = 0;
       float pressureGradient = (deltaP/pipeLength);
-      int pressure = pressureRight + (int) ((pxRight - (int) xpos)*pressureGradient);
+      int pressure = 0;
+      if (xpos >= px && xpos <= pxRight && ypos <= yTop && ypos >= yBottom) { //If pressure not within pipe limits, will get nonsense data
+        pressure = pressureRight + (int) ((pxRight - (int) xpos)*pressureGradient);
+      }
+      println("px" + px);
+      println("px right" + pxRight);
+      println("ytop" + yTop);
+      println("ybottom" + yBottom);
       println("Pressure: " + pressure);    
       xvel = velocities[0];
       yvel = velocities[1];
