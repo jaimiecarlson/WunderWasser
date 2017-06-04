@@ -78,9 +78,11 @@ PVector           haply_angles               = new PVector(0, 0);
 PVector           haply_torques              = new PVector(0, 0);
 
 /* task space */
-PVector           haply_pos_ee               = new PVector(300, 300);
+PVector           haply_pos_ee               = new PVector(0, 0);
 PVector           haply_f_ee                 = new PVector(0, 0); 
 
+PVector           haply_pos_origin           = new PVector(0.15, 0); //Where the Haply origin starts on the computer relative to screen (in m)
+                                                                    //TODO: @Brian change this based on your computer's dimensions
 
 /* Device block definitions ********************************************************************************************/
 Board           paddle_link;
@@ -248,19 +250,19 @@ void setup() {
   //LINKAGE
   /* BOARD */
   if(LINKAGE) {
-  //  haply_board = new Board(this, Serial.list()[0], 0);
+    haply_board = new Board(this, Serial.list()[0], 0);
 
     /* DEVICE */
-   // haply_2DoF = new Device(device_type.HaplyTwoDOF, deviceID, haply_board);
+    haply_2DoF = new Device(device_type.HaplyTwoDOF, deviceID, haply_board);
   }
   //PADDLE
   
   /* BOARD */
   if (PADDLE) {
-    //paddle_link = new Board(this, Serial.list()[32], 0); //don't know where in list
+    paddle_link = new Board(this, Serial.list()[32], 0); //don't know where in list
     //paddle_link = new Board(this, Serial.list()[1], 57600);
     /* DEVICE */
-    //paddle = new Device(degreesOfFreedom.HapticPaddle, device_function, paddle_link);
+    paddle = new Device(degreesOfFreedom.HapticPaddle, device_function, paddle_link);
   }
   /* haptics event timer, create and start a timer that has been configured to trigger onTickEvents */
   /* every TICK (1ms or 1kHz) and run for HOUR_IN_MILLIS (1hr), then resetting */
@@ -270,26 +272,34 @@ void setup() {
 }
 
 
-/**********************************************************************************************************************
- * Main draw function, updates simulation animation at prescribed framerate 
- **********************************************************************************************************************/
-void draw() { 
-  update_animation(haply_angles.x*radsPerDegree, haply_angles.y*radsPerDegree, haply_pos_ee.x, haply_pos_ee.y);
-  
-  //Put fluid drawing code here
-}
-
 
 /**********************************************************************************************************************
  * Haptics simulation event, engages state of physical mechanism, calculates and updates physics simulation conditions
+ * Haptics functions
  **********************************************************************************************************************/ 
+
+void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
+  /* check if new data is available from physical device */
+  if (LINKAGE) {
+    haplyUpdate();
+  }
+  if (PADDLE) {
+    hapkitUpdate();
+  }
+}
+
 void haplyUpdate(){
   if (haply_board.data_available()) {
     println("Haply data available");
     /* GET END-EFFECTOR POSITION (TASK SPACE) */
     haply_angles.set(haply_2DoF.get_device_angles()); 
-    haply_pos_ee.set( haply_2DoF.get_device_position(haply_angles.array()));
-    haply_pos_ee.set(device2graphics(haply_pos_ee));    
+    haply_pos_ee.set(haply_2DoF.get_device_position(haply_angles.array()));
+    println("haply position in m");
+    println(haply_pos_ee);
+    haply_pos_ee.add(haply_pos_origin); //Adds in origin of where linkage starts on computer
+    //haply_pos_ee.set(device2graphics(haply_pos_ee)); Does not actually convert to pixels
+    println("haply_pos_ee in pixels");
+    println(haply_pos_ee);
     
     /* PHYSICS OF THE SIMULATION */
     haply_f_wall.set(0, 0); 
@@ -354,20 +364,47 @@ void hapkitUpdate(){
   
 }
  
- 
- 
-void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
-  /* check if new data is available from physical device */
-  if (LINKAGE) {
-    haplyUpdate();
-  }
-  if (PADDLE) {
-    hapkitUpdate();
-  }
+/**********************************************************************************************************************
+ * Main draw function, updates simulation animation at prescribed framerate 
+ * Drawing functions
+ **********************************************************************************************************************/
+void draw() { 
+  update_animation(haply_angles.x*radsPerDegree, haply_angles.y*radsPerDegree, haply_pos_ee.x, haply_pos_ee.y);
+  updateFluid();
 }
 
+void update_animation(float th1, float th2, float x_E, float y_E){
+  
+  /* To clean up the left-overs of drawings from the previous loop */
+  background(255); 
+  
+  /* modify virtual object parameters to fit screen */
+  x_E = pixelsPerMeter*x_E; 
+  y_E = pixelsPerMeter*y_E; 
+  th1 = 3.14-th1;
+  th2 = 3.14-th2;
+  float l_ani = pixelsPerMeter*l; 
+  float L_ani = pixelsPerMeter*L; 
+  float d_ani = pixelsPerMeter*d; 
+  
+  //Update X and Y position
+  xpos = x_E;
+  ypos = y_E;
+  
+  println("X: " + xpos);
+  println("Y: " + ypos);
+  
+  
+  /* Vertex A with th1 from encoder reading */
+  //pantograph.setVertex(1,device_origin.x+l_ani*cos(th1), device_origin.y+l_ani*sin(th1)); 
+  
+  /* Vertex B with th2 from encoder reading */
+  //pantograph.setVertex(3,device_origin.x-d_ani+l_ani*cos(th2), device_origin.y+l_ani*sin(th2)); 
+  
+  /* Vertex E from Fwd Kin calculations */
+  //pantograph.setVertex(2,device_origin.x+x_E, device_origin.y+y_E);   
 
-/* Graphical and physics functions ************************************************************************************/
+}
 
 /**
  * update animations of all virtual objects rendered 
@@ -554,41 +591,7 @@ void updateFluid(){
 
 } 
  
-void update_animation(float th1, float th2, float x_E, float y_E){
-  
-  println("Drawing - should be called less often than device poll");
-  /* To clean up the left-overs of drawings from the previous loop */
-  background(255); 
-  
-  /* modify virtual object parameters to fit screen */
-  x_E = pixelsPerMeter*x_E; 
-  y_E = pixelsPerMeter*y_E; 
-  th1 = 3.14-th1;
-  th2 = 3.14-th2;
-  float l_ani = pixelsPerMeter*l; 
-  float L_ani = pixelsPerMeter*L; 
-  float d_ani = pixelsPerMeter*d; 
-  
-  //Update X and Y position
-  xpos = x_E;
-  ypos = y_E;
-  
-  println("X: " + xpos);
-  println("Y: " + ypos);
-  
-  updateFluid();
-  
-  
-  /* Vertex A with th1 from encoder reading */
-  //pantograph.setVertex(1,device_origin.x+l_ani*cos(th1), device_origin.y+l_ani*sin(th1)); 
-  
-  /* Vertex B with th2 from encoder reading */
-  //pantograph.setVertex(3,device_origin.x-d_ani+l_ani*cos(th2), device_origin.y+l_ani*sin(th2)); 
-  
-  /* Vertex E from Fwd Kin calculations */
-  //pantograph.setVertex(2,device_origin.x+x_E, device_origin.y+y_E);   
 
-}
 
 
 /**
@@ -809,7 +812,7 @@ void onFinishEvent(CountdownTimer t){
       
       RadioButton rb_setFluid_DisplayMode = cp5.addRadio("fluid_displayMode").setGroup(group_fluid).setSize(80,18).setPosition(px, py+=(int)(oy*1.5f))
           .setSpacingColumn(2).setSpacingRow(2).setItemsPerRow(2)
-         // .addItem("Temperature", 1)
+          .addItem("Temperature", 1)
           .addItem("Pressure"   ,2)
           .addItem("Velocity"   ,3)
           .activate(DISPLAY_fluid_texture_mode);
