@@ -12,7 +12,10 @@
  ************************************************************************************************************************
  */
 
-/* library imports *****************************************************************************************************/
+// Verbose output
+boolean DEBUG = false;
+
+// library imports *****************************************************************************************************
 import processing.serial.*;
 import com.dhchoi.CountdownTimer;
 import com.dhchoi.CountdownTimerService;
@@ -33,24 +36,24 @@ import controlP5.CallbackEvent;
 import controlP5.*;
 
 
-/* Device block definitions ********************************************************************************************/
+// Device block definitions ********************************************************************************************
 Device            haply_2DoF;
 byte              deviceID             = 5;
 Board             haply_board;
 DeviceType        device_type;
 
-/* Animation Speed Parameters *****************************************************************************************/
+// Animation Speed Parameters *****************************************************************************************
 long              baseFrameRate        = 60; //HOW OFTEN DRAW() WILL BE CALLED - CHANGED TO 60 FOR FLUIDS LIBRARY
 long              count                = 0; 
 
 
-/* Simulation Speed Parameters ****************************************************************************************/
+// Simulation Speed Parameters ****************************************************************************************
 final long        SIMULATION_PERIOD    = 1; //ms //HOW OFTEN HAPTIC OUTPUT WILL BE CALLED - 1000 HZ BY DEFAULT
 final long        HOUR_IN_MILLIS       = 36000000;
 CountdownTimer    haptic_timer;
 
 
-/* Graphics Simulation parameters *************************************************************************************/
+// Graphics Simulation parameters *************************************************************************************
 PShape            pantograph, joint1, joint2, handle;
 PShape            wall; 
 
@@ -65,31 +68,31 @@ float             r_ee                 = d/3;
 PVector           device_origin        = new PVector (0, 0) ; 
 
 
-/* Physics Simulation parameters **************************************************************************************/
+// Physics Simulation parameters **************************************************************************************
 PVector           haply_f_wall               = new PVector(0, 0); 
 float             k_wall               = 400; //N/mm 
 PVector           pen_wall             = new PVector(0, 0); 
 PVector           pos_wall             = new PVector(d/2, .07);
 
 
-/* generic data for a 2DOF device */
-/* joint space */
+// generic data for a 2DOF device
+// joint space
 PVector           haply_angles               = new PVector(0, 0);
 PVector           haply_torques              = new PVector(0, 0);
 
-/* task space */
+// task space
 PVector           haply_pos_ee               = new PVector(0, 0);
 PVector           haply_f_ee                 = new PVector(0, 0); 
 
 PVector           haply_pos_origin           = new PVector(0.15, 0); //Where the Haply origin starts on the computer relative to screen (in m)
                                                                     //TODO: @Brian change this based on your computer's dimensions
 
-/* Device block definitions ********************************************************************************************/
+// Device block definitions ********************************************************************************************
 Board           paddle_link;
 Device          paddle;
 DeviceType      degreesOfFreedom;
 
-/* Communications parameters ******************************************************************************************/
+// Communications parameters ******************************************************************************************
 byte            commType            = 0;
 byte            device_function     = 1;
 float[]         in_data;
@@ -109,9 +112,9 @@ float xvel = 0;
 float yvel = 0;
 float press = 0;
 
-  int viewport_w = 1057;
-  int viewport_h = 594;
-  int fluidgrid_scale = 1;
+  int viewport_w = 600; //1057;
+  int viewport_h = 400; //594;
+  int fluidgrid_scale = 2;
   
   int gui_w = 200;
   int gui_x = 20;
@@ -173,9 +176,9 @@ boolean LINKAGE = false;
 float viscosity = 1;
 
 int couetteTime = 0;
-/*********************************
-* Fluid setup function
-***********************************/
+//********************************
+// Fluid setup function
+//********************************
 
 public void fluidSetup(){
 
@@ -232,14 +235,14 @@ public void fluidSetup(){
     createGUI();
 }
 
-/**********************************************************************************************************************
- * Main setup function, defines parameters for physics simulation and initialize hardware setup
- **********************************************************************************************************************/
+//*********************************************************************************************************************
+// Main setup function, defines parameters for physics simulation and initialize hardware setup
+//*********************************************************************************************************************
 void setup() {
 
-  /* Setup for the graphic display window and drawing objects */
-  /* 20 cm x 15 cm */
-  size(1057, 594, P2D); //px/m*m_d = px
+  // Setup for the graphic display window and drawing objects
+  // 20 cm x 15 cm
+  size(600, 400, P2D); //px/m*m_d = px
   background(0);
   frameRate(baseFrameRate);
   
@@ -273,10 +276,10 @@ void setup() {
 
 
 
-/**********************************************************************************************************************
- * Haptics simulation event, engages state of physical mechanism, calculates and updates physics simulation conditions
- * Haptics functions
- **********************************************************************************************************************/ 
+//*********************************************************************************************************************
+// Haptics simulation event, engages state of physical mechanism, calculates and updates physics simulation conditions
+// Haptics functions
+//*********************************************************************************************************************
 
 void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
   /* check if new data is available from physical device */
@@ -290,16 +293,16 @@ void onTickEvent(CountdownTimer t, long timeLeftUntilFinish){
 
 void haplyUpdate(){
   if (haply_board.data_available()) {
-    println("Haply data available");
+    if (DEBUG)  println("Haply data available");
     /* GET END-EFFECTOR POSITION (TASK SPACE) */
     haply_angles.set(haply_2DoF.get_device_angles()); 
     haply_pos_ee.set(haply_2DoF.get_device_position(haply_angles.array()));
-    println("haply position in m");
-    println(haply_pos_ee);
+    if (DEBUG)  println("haply position in m");
+    if (DEBUG)  println(haply_pos_ee);
     haply_pos_ee.add(haply_pos_origin); //Adds in origin of where linkage starts on computer
     //haply_pos_ee.set(device2graphics(haply_pos_ee)); Does not actually convert to pixels
-    println("haply_pos_ee in pixels");
-    println(haply_pos_ee);
+    if (DEBUG)  println("haply_pos_ee in pixels");
+    if (DEBUG)  println(haply_pos_ee);
     
     /* PHYSICS OF THE SIMULATION */
     haply_f_wall.set(0, 0); 
@@ -316,17 +319,17 @@ void haplyUpdate(){
     } else if (linkageVelocityScale == EXP_SCALE){
       haply_f_wall.set(pow(2, linkageK*xvel), pow(2, linkageK*yvel)); //More emphasized difference
     } else {
-      println("Invalid scale");
+      if (DEBUG)  println("Invalid scale");
     }
 
     haply_f_ee = (haply_f_wall.copy()).mult(-1);
     haply_f_ee.set(graphics2device(haply_f_ee));
   } else {
-    println("Haply data not available");
+    if (DEBUG)  println("Haply data not available");
   }
 
-  println("Setting torque to 0");
-  /* update device torque in simulation and on physical device */
+  if (DEBUG)  println("Setting torque to 0");
+  // update device torque in simulation and on physical device
   haply_2DoF.set_device_torques(haply_f_ee.array());
   haply_torques.set(haply_2DoF.mechanisms.get_torque());
   haply_2DoF.device_write_torques();
@@ -340,7 +343,7 @@ void hapkitUpdate(){
     paddle.receive_data(); //Sets paddle mechanisms to correct angle and torque
     angle = paddle.mechanisms.get_angle();
     torque = paddle.mechanisms.get_torque();
-    println(torque); //If length of torque array is more than 1, the below explanation may be wrong. 
+    if (DEBUG)  println(torque); //If length of torque array is more than 1, the below explanation may be wrong. 
     
     //Scaling and k should be tuned with hardware
     
@@ -361,7 +364,7 @@ void hapkitUpdate(){
     } else if (paddleVelocityScale == EXP_SCALE){
       torque[0] = -pow(2, paddleK*press);
     } else {
-      println("Invalid scale");
+      if (DEBUG)  println("Invalid scale");
     }  
     
   } else {
@@ -427,8 +430,8 @@ void update_animation(float th1, float th2, float x_E, float y_E){
   xpos = x_E;
   ypos = y_E;
   
-  println("X: " + xpos);
-  println("Y: " + ypos);
+  if (DEBUG)  println("X: " + xpos);
+  if (DEBUG)  println("Y: " + ypos);
   
   
   /* Vertex A with th1 from encoder reading */
@@ -447,8 +450,8 @@ void update_animation(float th1, float th2, float x_E, float y_E){
  */
  
 void updateFluid(){
-  println("Updating fluid");
-  println("Plates or pipe" + platesOrPipe);
+  if (DEBUG)  println("Updating fluid");
+  if (DEBUG)  println("Plates or pipe" + platesOrPipe);
  // update simulation
     if(UPDATE_FLUID){
       fluid.param.dissipation_velocity = 1 - viscosity;
@@ -460,8 +463,8 @@ void updateFluid(){
     //Print out integer values of fluid at specific position
     if (!SERIAL) {
        velocities = fluid.getVelocity(velocities, (int) xpos, ((int) viewport_h - (int) ypos), 1, 1);
-       println("X pos: " + xpos + " X velocity: " + velocities[0]);
-       println("Y pos: " + ypos + " Y velocity: " + velocities[1]);
+       if (DEBUG)  println("X pos: " + xpos + " X velocity: " + velocities[0]);
+       if (DEBUG)  println("Y pos: " + ypos + " Y velocity: " + velocities[1]);
        //Write pressure to Hapkit    
       int px = viewport_w/3; //Pipe starting position
       int pxRight = px + (int) pipeLength; //Pipe length
@@ -472,11 +475,11 @@ void updateFluid(){
       if (xpos >= px && xpos <= pxRight && ypos <= yTop && ypos >= yBottom) { //If pressure not within pipe limits, will get nonsense data
         pressure = pressureRight + (int) ((pxRight - (int) xpos)*pressureGradient);
       }
-      println("px" + px);
-      println("px right" + pxRight);
-      println("ytop" + yTop);
-      println("ybottom" + yBottom);
-      println("Pressure: " + pressure);    
+      if (DEBUG)  println("px" + px);
+      if (DEBUG)  println("px right" + pxRight);
+      if (DEBUG)  println("ytop" + yTop);
+      if (DEBUG)  println("ybottom" + yBottom);
+      if (DEBUG)  println("Pressure: " + pressure);    
       xvel = velocities[0];
       yvel = velocities[1];
       press = pressure;
