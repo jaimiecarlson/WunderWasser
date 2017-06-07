@@ -13,7 +13,7 @@
  */
 
 // Verbose output
-boolean DEBUG = false;
+boolean DEBUG = true;
 
 // library imports *****************************************************
 import processing.serial.*;
@@ -115,7 +115,7 @@ float press = 0;
 // TODO(brwr)
 int viewport_w = 600; //1057;
 int viewport_h = 400; //594;
-int fluidgrid_scale = 2;
+int fluidgrid_scale = 1; //2;
 
 int gui_w = 200;
 int gui_x = 20;
@@ -298,6 +298,8 @@ void haplyUpdate(){
     // GET END-EFFECTOR POSITION (TASK SPACE) */
     haply_angles.set(haply_2DoF.get_device_angles());
     haply_pos_ee.set(haply_2DoF.get_device_position(haply_angles.array()));
+    //haply_pos_ee.set(device2graphics(haply_pos_ee));
+    
     if (DEBUG)  println("haply position in m");
     if (DEBUG)  println(haply_pos_ee);
     haply_pos_ee.add(haply_pos_origin); //Adds in origin of where linkage starts on computer
@@ -457,10 +459,11 @@ void updateFluid(){
   if (DEBUG)  println("Plates or pipe" + platesOrPipe);
   // update simulation
   if(UPDATE_FLUID){
-    fluid.param.dissipation_velocity = 1 - viscosity;
-    fluid.param.dissipation_density = viscosity;
+    fluid.param.dissipation_velocity = 1.01 - viscosity; //higher viscosity, slower fluid, should not go down to 0
+    fluid.param.dissipation_density = 1.01 - viscosity; //higher viscosity, denser fluid, should not go down to 0
     fluid.addObstacles(pg_obstacles);
     fluid.update();
+    println("fluid has been updated");
   }
 
   //Print out integer values of fluid at specific position
@@ -647,7 +650,6 @@ void updateFluid(){
 // translates from device frame of reference to graphics frame of reference
 // ***********
 PVector device2graphics(PVector deviceFrame){
-
   return deviceFrame.set(-deviceFrame.x, deviceFrame.y);
 }
 
